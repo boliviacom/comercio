@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Geek | Consultoría Digital/Catálogo</title>
+
+    <meta name="description"
+        content="Geek es la Consultoría Digital líder en Bolivia. Ofrecemos Estrategia, Desarrollo Web, Branding y Coaching de Negocios para llevar tu visión al éxito. ¡Avanza con nosotros!">
+
+    <link rel="canonical" href="https://geek.bo/">
+    <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/png" href="https://geek.bo/images/favicon.png" sizes="96x96">
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+    <meta property="og:title" content="Geek | Consultoría Digital, Coaching y Desarrollo Web">
+    <meta property="og:description"
+        content="Geek: Consultoría Digital y Coaching de Negocios en Bolivia. Estrategia, Desarrollo Web, Branding y Gestión Administrativa. ¡Avanzamos contigo hacia el éxito!">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_LA">
+    <meta property="og:url" content="https://geek.bo/">
+    <meta property="og:image" content="https://geek.bo/images/logo-compartir.png">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@soy.geek.bo">
+    <meta name="twitter:image" content="https://geek.bo/images/logo-compartir.png">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Geek",
+      "url": "https://geek.bo/",
+      "logo": "https://geek.bo/images/logo.png", 
+      "description": "Consultoría multidisciplinaria que integra estrategia comercial, gestión administrativa y transformación digital.",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+591-67540115",
+        "contactType": "customer service"
+      },
+      "sameAs": [
+        "https://www.facebook.com/GeekUser",
+        "https://www.instagram.com/soy.geek.bo/"
+      ]
+    }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/catalogo.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <header class="main-header">
+        <a href="/#inicio" class="logo-container">
+            <div class="logo-text-wrapper">
+                <img src="images/logo.png" alt="Logo de la empresa" class="logo-light">
+                <img src="images/logo_blanco.png" alt="Logo de la empresa (modo oscuro)" class="logo-dark">
+            </div>
+        </a>
+
+        <div class="theme-controls">
+            <button id="dark-mode-toggle" class="mode-toggle-btn" aria-label="Cambiar Modo Oscuro">
+                <i class="fas fa-moon"></i>
+            </button>
+
+            <button id="color-picker-toggle" class="mode-toggle-btn" aria-label="Seleccionar color">
+                <i class="fas fa-palette"></i>
+            </button>
+
+            <div id="color-switcher" class="color-switcher">
+                <button data-theme="default" title="Tema Verde Original" class="color-swatch default"></button>
+                <button data-theme="sunset" title="Tema Atardecer" class="color-swatch sunset"></button>
+                <button data-theme="ocean" title="Tema Océano" class="color-swatch ocean"></button>
+            </div>
+            <button id="cart-toggle-btn" class="mode-toggle-btn relative" aria-label="Ver Carrito de Cotización">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-count"
+                    class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full hidden">0</span>
+            </button>
+        </div>
+
+        <button class="burger-menu" aria-label="Abrir menú">
+            <span class="burger-line"></span>
+            <span class="burger-line"></span>
+            <span class="burger-line"></span>
+        </button>
+
+        <nav class="main-nav" id="main-nav">
+            <ul>
+                <li><a href="/#inicio">Inicio</a></li>
+                <li><a href="/#quienes-somos">¿Quiénes Somos?</a></li>
+                <li><a href="catalogo.html">Servicios</a></li>
+                <li><a href="/#resenas">Reseñas</a></li>
+                <li><a href="/#contactanos">Contáctanos</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="catalogo-container">
+        <section id="catalogo-ecommerce" class="py-20 md:py-28">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-4xl font-extrabold">
+                        Catálogo de Soluciones Estratégicas
+                    </h2>
+                    <p class="mt-4 text-xl">
+                        Selecciona las áreas donde necesitas apoyo y te contactaremos con una propuesta a medida.
+                    </p>
+                </div>
+
+                <div class="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
+
+                    <a href="#/servicios/redes-sociales"
+                        class="product-card rounded-xl transition duration-300 flex flex-col text-center overflow-hidden relative group">
+                        <img src="images/redes_sociales.webp" alt="Imagen de Redes Sociales"
+                            class="card-image w-full h-48 object-cover transition duration-300 group-hover:opacity-85">
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="text-2xl font-bold flex-grow mb-6 flex items-center justify-center">
+                                Redes Sociales
+                            </h3>
+                            <p class="text-sm text-gray-500 mb-4">Estrategia y gestión de contenido para tus plataformas
+                                digitales.</p>
+                            <div class="mt-auto">
+                                <button
+                                    class="add-to-cart prevent-navigation py-3 px-6 rounded-xl shadow-md transition duration-300 text-center w-full block font-semibold text-lg"
+                                    data-service-name="Redes Sociales" data-service-price="">
+                                    Añadir a Cotización
+                                </button>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a href="#/servicios/gestion-comercial"
+                        class="product-card rounded-xl transition duration-300 flex flex-col text-center overflow-hidden relative group">
+                        <img src="images/mercado.jpg" alt="Imagen de Gestión Comercial"
+                            class="card-image w-full h-48 object-cover transition duration-300 group-hover:opacity-85">
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="text-2xl font-bold flex-grow mb-6 flex items-center justify-center">
+                                Gestión Comercial
+                            </h3>
+                            <p class="text-sm text-gray-500 mb-4">Optimización de procesos de venta y relación con el
+                                cliente.</p>
+                            <div class="mt-auto">
+                                <button
+                                    class="add-to-cart prevent-navigation py-3 px-6 rounded-xl shadow-md transition duration-300 text-center w-full block font-semibold text-lg"
+                                    data-service-name="Gestión Comercial" data-service-price="">
+                                    Añadir a Cotización
+                                </button>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a href="#/servicios/gestion-de-procesos"
+                        class="product-card rounded-xl transition duration-300 flex flex-col text-center overflow-hidden relative group">
+                        <img src="images/soluciones.webp" alt="Imagen de Gestión de Procesos"
+                            class="card-image w-full h-48 object-cover transition duration-300 group-hover:opacity-85">
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="text-2xl font-bold flex-grow mb-6 flex items-center justify-center">
+                                Gestión de Procesos
+                            </h3>
+                            <p class="text-sm text-gray-500 mb-4">Definición y mejora de flujos de trabajo internos para
+                                eficiencia.</p>
+                            <div class="mt-auto">
+                                <button
+                                    class="add-to-cart prevent-navigation py-3 px-6 rounded-xl shadow-md transition duration-300 text-center w-full block font-semibold text-lg"
+                                    data-service-name="Gestión de Procesos" data-service-price="">
+                                    Añadir a Cotización
+                                </button>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a href="#/servicios/gestion-administrativa"
+                        class="product-card rounded-xl transition duration-300 flex flex-col text-center overflow-hidden relative group">
+                        <img src="images/inventario.jpg" alt="Imagen de Gestión Administrativa"
+                            class="card-image w-full h-48 object-cover transition duration-300 group-hover:opacity-85">
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="text-2xl font-bold flex-grow mb-6 flex items-center justify-center">
+                                Gestión Administrativa
+                            </h3>
+                            <p class="text-sm text-gray-500 mb-4">Asesoramiento en organización, finanzas y recursos
+                                humanos.</p>
+                            <div class="mt-auto">
+                                <button
+                                    class="add-to-cart prevent-navigation py-3 px-6 rounded-xl shadow-md transition duration-300 text-center w-full block font-semibold text-lg"
+                                    data-service-name="Gestión Administrativa" data-service-price="">
+                                    Añadir a Cotización
+                                </button>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a href="#/servicios/tecnologia"
+                        class="product-card rounded-xl transition duration-300 flex flex-col text-center overflow-hidden relative group">
+                        <img src="images/tecnologia.jpg" alt="Imagen de Tecnología"
+                            class="card-image w-full h-48 object-cover transition duration-300 group-hover:opacity-85">
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="text-2xl font-bold flex-grow mb-6 flex items-center justify-center">
+                                Tecnología
+                            </h3>
+                            <p class="text-sm text-gray-500 mb-4">Implementación de soluciones digitales y desarrollo
+                                web/apps.</p>
+                            <div class="mt-auto">
+                                <button
+                                    class="add-to-cart prevent-navigation py-3 px-6 rounded-xl shadow-md transition duration-300 text-center w-full block font-semibold text-lg"
+                                    data-service-name="Tecnología" data-service-price="">
+                                    Añadir a Cotización
+                                </button>
+                            </div>
+                        </div>
+                    </a>
+
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <section id="service-detail-container" class="py-16 px-4 hidden">
+    </section>
+    <footer class="main-footer">
+        <div class="footer-content-grid">
+            <div class="footer-item footer-logo">
+                <img src="images/logo.png" alt="Logo de la Empresa" class="logo-img logo-light">
+                <img src="images/logo_blanco.png" alt="Logo de la Empresa (modo oscuro)" class="logo-img logo-dark">
+            </div>
+
+            <div class="footer-item footer-contact">
+                <h3>Contacto</h3>
+                <ul>
+                    <li>
+                        Teléfono:
+                        <a href="https://wa.me/59167540115" target="_blank" class="footer-whatsapp-link">
+                            +591 67540115
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="footer-item footer-social">
+                <h3>Síguenos</h3>
+                <div class="social-links">
+                    <a href="https://www.facebook.com/GeekUser" target="_blank" aria-label="Síguenos en Facebook"><i
+                            class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/soy.geek.bo/" target="_blank"
+                        aria-label="Síguenos en Instagram"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-copyright">
+            <p>&copy; 2025 Geek. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+    <div id="cart-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50 overflow-y-auto flex justify-center items-center">
+        <div
+            class="modal-content-geek relative w-11/12 md:max-w-4xl mx-auto rounded-xl shadow-2xl p-8 transform transition-all duration-300">
+            <div class="flex justify-between items-center border-b-2 pb-4 mb-6 modal-header-geek">
+                <h3 class="text-3xl font-extrabold text-primary"><i class="fas fa-shopping-basket mr-3"></i>
+                    Mi Lista de Cotización
+                </h3>
+                <button id="close-cart-modal"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-light">&times;</button>
+            </div>
+
+            <div class="modal-body-geek flex flex-col lg:flex-row gap-8">
+                <div class="lg:w-1/2">
+                    <h4 class="text-xl font-bold mb-4 text-dark-text-geek">Servicios Elegidos</h4>
+                    <div id="cart-items-list" class="space-y-4 max-h-[400px] overflow-y-auto mb-6 p-1">
+                        <p id="cart-empty-message" class="text-gray-500 text-center py-4">Tu lista de cotización está
+                            vacía.</p>
+                    </div>
+                </div>
+
+                <div class="lg:w-1/2">
+                    <h4 class="text-xl font-bold mb-4 text-dark-text-geek border-t lg:border-t-0 pt-4 lg:pt-0">Tus Datos
+                        de Contacto</h4>
+                    <form id="quote-form" class="space-y-4">
+                        <input type="text" id="user-name" placeholder="Tu Nombre Completo" required
+                            class="input-field-geek w-full p-3 border rounded-lg focus:ring-2">
+                        <input type="email" id="user-email" placeholder="Tu Correo Electrónico"
+                            class="input-field-geek w-full p-3 border rounded-lg focus:ring-2">
+                        <input type="text" id="user-phone" placeholder="Tu Número de WhatsApp (+591...)" required
+                            class="input-field-geek w-full p-3 border rounded-lg focus:ring-2">
+                        <textarea id="user-message" placeholder="¿Tienes alguna pregunta específica? (Opcional)"
+                            rows="3" class="input-field-geek w-full p-3 border rounded-lg focus:ring-2"></textarea>
+
+                        <div class="space-y-3 pt-2">
+                            <button type="button" id="clear-cart-btn" disabled class="py-3 px-6 rounded-xl shadow-xl w-full font-extrabold text-lg
+                                   bg-gray-300 text-gray-700 hover:bg-gray-400 transition duration-300
+                                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                                Vaciar Carrito <i class="fas fa-trash-alt ml-2"></i>
+                            </button>
+
+                            <button type="submit" id="send-quote-btn" disabled
+                                class="btn-whatsapp-geek text-white text-lg font-extrabold py-3 px-6 rounded-xl shadow-xl w-full transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                                <i class="fab fa-whatsapp mr-2 text-2xl"></i>Cotización Rápida
+                            </button>
+
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="quick-quote-service-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50 overflow-y-auto flex justify-center items-center">
+        <div id="quick-service-modal-content-wrapper"
+            class="quick-modal-content-geek relative w-11/12 md:max-w-lg mx-auto rounded-xl shadow-2xl p-8 transform transition-all duration-300 bg-white dark:bg-gray-800">
+        </div>
+    </div>
+
+    <div id="cart-notification"
+        class="fixed top-4 right-4 z-[100] transform transition-all duration-300 p-3 rounded-xl shadow-2xl text-white font-semibold hidden bg-green-500">
+        <span id="cart-notification-message"></span>
+    </div>
+
+    <a href="https://wa.me/59167540115?text=Hola%2C%20me%20interesan%20sus%20servicios%20y%20necesito%20una%20consulta."
+        target="_blank" class="whatsapp-fab" aria-label="Iniciar chat por WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+    <script src="js/main.js"></script>
+    <script src="js/tema.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/quick_quote.js"></script>
+    <script src="js/router.js"></script>
+</body>
+
+</html>

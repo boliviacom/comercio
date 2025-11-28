@@ -1,0 +1,68 @@
+[
+    {
+        "id": "redes-sociales",
+        "nombre": "Redes Sociales",
+        "titulo_pagina": "Estrategia Digital y Gestión de Redes Sociales",
+        "descripcion_corta": "Impulsa tu marca con contenido digital atractivo y una estrategia de difusión efectiva.",
+        "descripcion_larga": "Nos enfocamos en construir una presencia digital sólida y coherente, desde la identidad visual de tu marca (Branding) hasta la ejecución de campañas de promoción segmentadas.",
+        "ruta_imagen": "images/redes_sociales.webp",
+        "servicios_ofrecidos": [
+            "Creación de Contenido Digital (escrito y multimedia)",
+            "Branding (definición de identidad y voz de marca)",
+            "Diseño Gráfico y Audiovisual (creación de posts, historias y videos)",
+            "Difusión y Promoción (gestión de anuncios pagados y alcance orgánico)"
+        ]
+    },
+    {
+        "id": "gestion-comercial",
+        "nombre": "Gestión Comercial",
+        "titulo_pagina": "Optimización de la Estrategia Comercial y de Ventas",
+        "descripcion_corta": "Obtén información valiosa del mercado y utiliza los datos para tomar decisiones estratégicas en ventas y compras.",
+        "descripcion_larga": "Transformamos datos en acciones. Te ayudamos a comprender el entorno competitivo y el rendimiento interno para maximizar la rentabilidad de tu operación comercial.",
+        "ruta_imagen": "images/mercado.jpg",
+        "servicios_ofrecidos": [
+            "Investigación de Mercado (tendencias y demanda)",
+            "Análisis de Competencia, ventas y compras (identificación de oportunidades)",
+            "Análisis de datos y dashboards (visualización e interpretación de KPIs)"
+        ]
+    },
+    {
+        "id": "gestion-de-procesos",
+        "nombre": "Gestión de Procesos",
+        "titulo_pagina": "Diseño e Implementación de Soluciones Operativas",
+        "descripcion_corta": "Mejora la eficiencia interna a través del diseño, implementación y puesta en marcha de procesos optimizados.",
+        "descripcion_larga": "Identificamos las áreas de mejora dentro de tu operación mediante diagnósticos detallados, diseñamos soluciones a medida y te acompañamos en la implementación para garantizar una ejecución fluida.",
+        "ruta_imagen": "images/soluciones.webp",
+        "servicios_ofrecidos": [
+            "Diágnosticos operativos (identificación de cuellos de botella)",
+            "Diseño de soluciones (definición de flujo de trabajo y roles)",
+            "Implementación y puesta en marcha (capacitación y seguimiento)"
+        ]
+    },
+    {
+        "id": "gestion-administrativa",
+        "nombre": "Gestión Administrativa",
+        "titulo_pagina": "Control y Optimización de la Gestión de Recursos",
+        "descripcion_corta": "Establece un control financiero y logístico sólido, desde inventarios hasta la determinación de precios de venta.",
+        "descripcion_larga": "Proporcionamos las herramientas y metodologías necesarias para una administración eficiente, asegurando que tus costos y recursos estén alineados con tus objetivos de rentabilidad.",
+        "ruta_imagen": "images/inventario.jpg",
+        "servicios_ofrecidos": [
+            "Gestión de Inventarios (control de stock y optimización de almacén)",
+            "Determinación de costos y precios de venta (análisis de punto de equilibrio)",
+            "Elaboración de layouts con enfoque de procesos (diseño de espacios de trabajo eficientes)"
+        ]
+    },
+    {
+        "id": "tecnologia",
+        "nombre": "Tecnología",
+        "titulo_pagina": "Innovación y Asesoramiento en Transformación Digital",
+        "descripcion_corta": "Impulsa tu negocio al futuro con soluciones tecnológicas a medida y asesoramiento experto en digitalización.",
+        "descripcion_larga": "Desde la creación de plataformas digitales que te conectan con tus clientes hasta la gestión segura de tu infraestructura de datos, somos tu aliado en la transformación digital.",
+        "ruta_imagen": "images/tecnologia.jpg",
+        "servicios_ofrecidos": [
+            "Desarrollo de aplicaciones y sitios web (soluciones móviles y web personalizadas)",
+            "Gestión de centros de datos (seguridad, rendimiento y almacenamiento)",
+            "Transformación digital y asesoramiento (estrategias de integración tecnológica)"
+        ]
+    }
+]

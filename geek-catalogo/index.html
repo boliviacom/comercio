@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Geek | Consultoría Digital, Desarrollo Web y Coaching en Bolivia</title>
+
+    <meta name="description"
+        content="Geek es la Consultoría Digital líder en Bolivia. Ofrecemos Estrategia, Desarrollo Web, Branding y Coaching de Negocios para llevar tu visión al éxito. ¡Avanza con nosotros!">
+
+    <link rel="canonical" href="https://geek.bo/">
+    <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/png" href="https://geek.bo/images/favicon.png" sizes="96x96">
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+    <meta property="og:title" content="Geek | Consultoría Digital, Coaching y Desarrollo Web">
+    <meta property="og:description"
+        content="Geek: Consultoría Digital y Coaching de Negocios en Bolivia. Estrategia, Desarrollo Web, Branding y Gestión Administrativa. ¡Avanzamos contigo hacia el éxito!">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_LA">
+    <meta property="og:url" content="https://geek.bo/">
+    <meta property="og:image" content="https://geek.bo/images/logo-compartir.png">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@soy.geek.bo">
+    <meta name="twitter:image" content="https://geek.bo/images/logo-compartir.png">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Geek",
+      "url": "https://geek.bo/",
+      "logo": "https://geek.bo/images/logo.png", 
+      "description": "Consultoría multidisciplinaria que integra estrategia comercial, gestión administrativa y transformación digital.",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+591-67540115",
+        "contactType": "customer service"
+      },
+      "sameAs": [
+        "https://www.facebook.com/GeekUser",
+        "https://www.instagram.com/soy.geek.bo/"
+      ]
+    }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/catalogo.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <header class="main-header">
+        <a href="/#inicio" class="logo-container">
+            <div class="logo-text-wrapper">
+                <img src="images/logo.png" alt="Logo de la empresa" class="logo-light">
+                <img src="images/logo_blanco.png" alt="Logo de la empresa (modo oscuro)" class="logo-dark">
+            </div>
+        </a>
+
+        <div class="theme-controls">
+            <button id="dark-mode-toggle" class="mode-toggle-btn" aria-label="Cambiar Modo Oscuro">
+                <i class="fas fa-moon"></i>
+            </button>
+
+            <button id="color-picker-toggle" class="mode-toggle-btn" aria-label="Seleccionar color">
+                <i class="fas fa-palette"></i>
+            </button>
+
+            <div id="color-switcher" class="color-switcher">
+                <button data-theme="default" title="Tema Verde Original" class="color-swatch default"></button>
+                <button data-theme="sunset" title="Tema Atardecer" class="color-swatch sunset"></button>
+                <button data-theme="ocean" title="Tema Océano" class="color-swatch ocean"></button>
+            </div>
+            <button id="cart-toggle-btn" class="mode-toggle-btn relative" aria-label="Ver Carrito de Cotización">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-count"
+                    class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full hidden">0</span>
+            </button>
+        </div>
+
+        <button class="burger-menu" aria-label="Abrir menú">
+            <span class="burger-line"></span>
+            <span class="burger-line"></span>
+            <span class="burger-line"></span>
+        </button>
+
+        <nav class="main-nav" id="main-nav">
+            <ul>
+                <li><a href="/#inicio">Inicio</a></li>
+                <li><a href="/#quienes-somos">¿Quiénes Somos?</a></li>
+                <li><a href="catalogo.html">Servicios</a></li>
+                <li><a href="/#resenas">Reseñas</a></li>
+                <li><a href="/#contactanos">Contáctanos</a></li>
+            </ul>
+        </nav>
+    </header>
+    <section id="inicio" class="py-20 md:py-32 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-12 items-center">
+            <div class="order-2 md:order-1">
+                <span class="text-secondary font-semibold uppercase tracking-wider">Hacemos crecer tu marca</span>
+                <h1 class="mt-4 text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">
+                    Avanzamos contigo hacia el futuro <span class="text-primary">DIGITAL</span>
+                </h1>
+                <p class="mt-6 text-xl text-gray-600">
+                    En Geek Consultoría Digital, somos líderes en Bolivia. Ofrecemos coaching de negocios y
+                    desarrollo web para convertir tu visión en una realidad rentable. Lideramos la innovación con
+                    planes y resultados medibles.
+                </p>
+                <div class="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                    <a href="#servicios"
+                        class="btn-secondary border py-3 px-8 rounded-xl transition duration-300 text-center">
+                        Ver Servicios
+                    </a>
+                </div>
+            </div>
+
+            <div class="order-1 md:order-2">
+                <img src="images/trabajo_equipo.webp" alt="Innovación y Estrategia Digital"
+                    class="rounded-2xl shadow-2xl w-full h-auto object-cover">
+            </div>
+        </div>
+    </section>
+    <section id="quienes-somos" class="py-20 md:py-28 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-4xl mx-auto">
+                <h2 class="text-4xl font-extrabold text-gray-900">
+                    Nuestra Misión: <span class="text-primary">Construir Éxito Digital en Equipo</span>
+                </h2>
+                <p class="mt-4 text-xl text-gray-600">
+                    Somos una consultora multidisciplinaria que acompaña a profesionales y empresas en su crecimiento,
+                    integrando estrategia comercial, gestión administrativa y transformación digital con soluciones
+                    creativas, prácticas y medibles.
+                </p>
+            </div>
+
+            <div class="mt-16 grid md:grid-cols-3 gap-8">
+                <div
+                    class="card-hover-effect card-teal text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden">
+                    <div class="card-content relative z-10">
+                        <div
+                            class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                            💡</div>
+                        <h3 class="text-xl font-bold text-gray-900 transition-colors duration-300">Visión Estratégica
+                        </h3>
+                        <p class="mt-2 text-gray-500 transition-colors duration-300">
+                            Convertimos tu visión en un plan digital hecho a medida, alineado con tus objetivos de
+                            negocio.
+                        </p>
+                    </div>
+                </div>
+                <div
+                    class="card-hover-effect card-mint text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden">
+                    <div class="card-content relative z-10">
+                        <div
+                            class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                            🤝</div>
+                        <h3 class="text-xl font-bold text-gray-900 transition-colors duration-300">Trabajo en Equipo
+                        </h3>
+                        <p class="mt-2 text-gray-500 transition-colors duration-300">
+                            Creemos que el éxito digital se construye en conjunto, acompañándote en cada etapa del
+                            proceso.
+                        </p>
+                    </div>
+                </div>
+                <div
+                    class="card-hover-effect card-dark-teal text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden">
+                    <div class="card-content relative z-10">
+                        <div
+                            class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                            🏆</div>
+                        <h3 class="text-xl font-bold text-gray-900 transition-colors duration-300">Resultados Medibles
+                        </h3>
+                        <p class="mt-2 text-gray-500 transition-colors duration-300">
+                            Nos enfocamos en acciones prácticas que generan impacto real: más eficiencia, más clientes y
+                            más
+                            crecimiento.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="servicios" class="py-20 md:py-28 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-4xl font-extrabold text-gray-900">
+                    Servicios Hechos a la Medida <span class="text-primary">de Tu Éxito</span>
+                </h2>
+                <p class="mt-4 text-xl text-gray-600">
+                    Te ofrecemos soluciones digitales completas para que tu negocio se adapte y crezca en la era
+                    digital.
+                </p>
+            </div>
+
+            <div class="carousel-container mt-16 relative">
+
+                <button id="prev-btn" class="carousel-nav-btn left-0 visible-all-screens">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="next-btn" class="carousel-nav-btn right-0 visible-all-screens">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <div id="services-carousel" class="services-carousel-track">
+
+                    <div
+                        class="card-hover-effect card-teal text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_1.webp" alt="Ícono de Estrategia Digital" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Estrategia
+                                Digital</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Diseñamos planes personalizados
+                                para aumentar tu visibilidad y captar clientes.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-mint text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_2.png" alt="Ícono de Branding y Diseño" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Branding y
+                                Diseño</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Creamos identidades visuales
+                                coherentes y memorables: logotipos, portadas, materiales descargables.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-teal text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_3.webp" alt="Ícono de Desarrollo Web" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Desarrollo
+                                Web
+                            </h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Sitios rápidos, modernos y
+                                optimizados para SEO. Desde landing pages hasta tiendas online.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-mint text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_4.webp" alt="Ícono de Producción de Contenido" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Producción
+                                de
+                                Contenido</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Planificación y ejecución de
+                                contenido para redes, podcasts y canales digitales.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-teal text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_5.webp" alt="Ícono de Gestión Administrativa" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Gestión
+                                Administrativa e Inventarios</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Te ayudamos a digitalizar la
+                                gestión de documentos, reportes financieros y operaciones internas, reduciendo la carga
+                                manual y mejorando el control de tu negocio.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-mint text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_6.png" alt="Ícono de Procesos Empresariales" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Gestión de
+                                Procesos Empresariales</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Analizamos y optimizamos tus
+                                flujos
+                                de trabajo, identificamos cuellos de botella y te proponemos soluciones digitales para
+                                que
+                                tu equipo sea más eficiente.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-teal text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_7.png" alt="Ícono de Gestión Comercial" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Gestión
+                                Comercial</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Diseñamos estrategias para
+                                mejorar
+                                tus ventas, organizamos tus bases de datos de clientes y aplicamos herramientas de CRM
+                                que
+                                te permiten fidelizar y aumentar tus ingresos.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-mint text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_8.png" alt="Ícono de Coaching Ejecutivo" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Coaching
+                                Ejecutivo y de Negocios</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Acompañamos a líderes y
+                                empresarios
+                                en la toma de decisiones estratégicas, desarrollo de habilidades y visión a largo plazo.
+                            </p>
+                        </div>
+                    </div>
+                    <div
+                        class="card-hover-effect card-teal text-center p-6 bg-white rounded-xl shadow-lg relative overflow-hidden service-card">
+                        <div class="card-content relative z-10">
+                            <div
+                                class="icon-circle w-12 h-12 mx-auto bg-secondary rounded-full flex items-center justify-center text-white text-2xl mb-4">
+                                <img src="images/tarjeta_9.png" alt="Ícono de Coaching de Equipos" class="w-6 h-6">
+                            </div>
+                            <h3 class="mt-4 text-xl font-bold text-gray-900 transition-colors duration-300">Coaching de
+                                Equipos</h3>
+                            <p class="mt-2 text-gray-500 transition-colors duration-300">Fortalecemos la comunicación,
+                                la
+                                motivación y la sinergia en tu equipo de trabajo para que alcancen mejores resultados
+                                juntos.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="services-dots-container" class="flex justify-center mt-8 space-x-3">
+            </div>
+
+        </div>
+    </section>
+    <section id="resenas" class="py-20 md:py-28 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-4xl mx-auto">
+                <h2 class="text-4xl font-extrabold text-gray-900">
+                    Nuestros Clientes lo <span class="text-primary">Confirman</span>
+                </h2>
+                <p class="mt-4 text-xl">
+                    El 98% de nuestros clientes repiten sus proyectos con nosotros. Tu satisfacción es nuestra métrica
+                    más importante.
+                </p>
+            </div>
+
+            <div class="w-full mx-auto mt-16">
+                <div
+                    class="relative overflow-hidden shadow-review-card rounded-3xl bg-review-card border border-gray-100">
+
+                    <div id="carousel-track" class="carousel-track flex w-full">
+
+                        <div class="w-full flex-shrink-0 p-8 sm:p-10 testimonial-card" id="card-0">
+                            <div class="testimonial-card-content">
+                                <div class="flex items-start justify-between mb-6">
+                                    <div class="flex items-center">
+                                        <img class="w-16 h-16 rounded-full object-cover ring-2 ring-primary/50"
+                                            src="images/luis.webp" alt="Avatar de Dr. Luis Paredes">
+                                        <div class="ml-4">
+                                            <p class="text-lg font-extrabold text-gray-900 uppercase leading-tight">Dr.
+                                                Luis Paredes</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="review-text-container" id="review-text-0">
+                                    <p class="text-xl text-gray-700 leading-relaxed font-normal review-text">
+                                        "Geek transformó la forma en que comunico información médica. Me ayudaron a
+                                        convertir conceptos complejos en contenido claro y atractivo para redes y a
+                                        lanzar una serie de videos educativos. El engagement creció, recibí más
+                                        consultas y ahora mis publicaciones llegan a audiencias que antes no alcanzaba.
+                                        Profesionalismo, respeto por el contenido técnico y creatividad: una combinación
+                                        perfecta. Gracias a ellos mi canal ya es una referencia local en salud
+                                        preventiva."
+                                    </p>
+                                    <button class="toggle-btn" data-target="review-text-0">Mostrar más</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full flex-shrink-0 p-8 sm:p-10 testimonial-card" id="card-1">
+                            <div class="testimonial-card-content">
+                                <div class="flex items-start justify-between mb-6">
+                                    <div class="flex items-center">
+                                        <img class="w-16 h-16 rounded-full object-cover ring-2 ring-primary/50"
+                                            src="images/julia.webp" alt="Avatar de Julia Ramirez">
+                                        <div class="ml-4">
+                                            <p class="text-lg font-extrabold text-gray-900 uppercase leading-tight">
+                                                Julia Ramirez</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="review-text-container" id="review-text-1">
+                                    <p class="text-xl text-gray-700 leading-relaxed font-normal review-text">
+                                        "Gracias al coaching de vida con Geek, logré organizar mis metas personales y
+                                        profesionales de manera clara. Sus sesiones me ayudaron a tomar decisiones con
+                                        seguridad, superar bloqueos y ganar confianza en mí misma. Ahora siento que
+                                        avanzo con propósito y equilibrio en cada aspecto de mi vida."
+                                    </p>
+                                    <button class="toggle-btn" data-target="review-text-1">Mostrar más</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full flex-shrink-0 p-8 sm:p-10 testimonial-card" id="card-2">
+                            <div class="testimonial-card-content">
+                                <div class="flex items-start justify-between mb-6">
+                                    <div class="flex items-center">
+                                        <img class="w-16 h-16 rounded-full object-cover ring-2 ring-primary/50"
+                                            src="images/maria.webp" alt="Avatar de María Gomez">
+                                        <div class="ml-4">
+                                            <p class="text-lg font-extrabold text-gray-900 uppercase leading-tight">
+                                                María Gomez</p>
+                                            <p class="text-sm text-gray-500 italic leading-tight">Propietaria de Tienda
+                                                de Abarrotes</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="w-5 h-5 text-yellow-400 fill-current">
+                                            <polygon
+                                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="review-text-container" id="review-text-2">
+                                    <p class="text-xl text-gray-700 leading-relaxed font-normal review-text">
+                                        "Antes de trabajar con Geek mi tienda era una más entre muchas; no sabíamos cómo
+                                        diferenciarnos ni cómo vender online. El equipo de Geek nos ayudó con branding,
+                                        fotos de producto y una estrategia sencilla de redes. En tres meses nuestras
+                                        ventas por pedidos a domicilio aumentaron notablemente y los clientes empezaron
+                                        a reconocer la marca. Lo que más valoro fue su enfoque práctico: acciones
+                                        pequeñas y medibles que dieron resultados reales. Recomiendo a Geek para quien
+                                        quiere crecer sin complicaciones."
+                                    </p>
+                                    <button class="toggle-btn" data-target="review-text-2">Mostrar más</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <button id="prev-button"
+                        class="nav-btn absolute left-0 top-1/2 transform -translate-y-1/2 p-3 sm:p-4 ml-2 text-primary rounded-full transition duration-300 z-10 focus:outline-none focus:ring-4 focus:ring-primary/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="w-6 h-6">
+                            <path d="m15 18-6-6 6-6" />
+                        </svg>
+                    </button>
+
+                    <button id="next-button"
+                        class="nav-btn absolute right-0 top-1/2 transform -translate-y-1/2 p-3 sm:p-4 mr-2 text-primary rounded-full transition duration-300 z-10 focus:outline-none focus:ring-4 focus:ring-primary/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="w-6 h-6">
+                            <path d="m9 18 6-6-6-6" />
+                        </svg>
+                    </button>
+
+                    <div id="indicators" class="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="contactanos" class="py-20 md:py-28 bg-teal-custom">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-4xl font-extrabold">
+                Agenda tu <span class="text-secondary">Consulta Gratuita</span>
+            </h2>
+            <p class="mt-4 text-xl mb-12 opacity-90">
+                Reserva una sesión estratégica gratuita con nuestro equipo.
+            </p>
+
+            <div class="max-w-6xl mx-auto">
+
+                <div class="contact-card card-calendly p-8">
+                    <h3 class="text-3xl font-bold text-primary mb-6">Reserva tu Sesión Estratégica</h3>
+                    <p class="text-gray-600 mb-6">Selecciona el horario que mejor te funcione en nuestro calendario y
+                        comencemos a planificar tu éxito.</p>
+                    <div class="calendly-inline-widget contact-calendly-container"
+                        data-url="https://calendly.com/hugo-geek/30min?primary_color=2e5e55&locale=es"
+                        style="min-width:320px; height:600px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <footer class="main-footer">
+        <div class="footer-content-grid">
+            <div class="footer-item footer-logo">
+                <img src="images/logo.png" alt="Logo de la Empresa" class="logo-img logo-light">
+                <img src="images/logo_blanco.png" alt="Logo de la Empresa (modo oscuro)" class="logo-img logo-dark">
+            </div>
+
+            <div class="footer-item footer-contact">
+                <h3>Contacto</h3>
+                <ul>
+                    <li>
+                        Teléfono:
+                        <a href="https://wa.me/59167540115" target="_blank" class="footer-whatsapp-link">
+                            +591 67540115
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="footer-item footer-social">
+                <h3>Síguenos</h3>
+                <div class="social-links">
+                    <a href="https://www.facebook.com/GeekUser" target="_blank" aria-label="Síguenos en Facebook"><i
+                            class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.instagram.com/soy.geek.bo/" target="_blank"
+                        aria-label="Síguenos en Instagram"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-copyright">
+            <p>&copy; 2025 Geek. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+    <div id="cart-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50 overflow-y-auto flex justify-center items-start">
+        <div
+            class="modal-content-geek relative w-11/12 md:max-w-4xl mx-auto rounded-xl shadow-2xl p-8 mt-10 transform transition-all duration-300">
+            <div class="flex justify-between items-center border-b-2 pb-4 mb-6 modal-header-geek">
+                <h3 class="text-3xl font-extrabold text-primary"><i class="fas fa-shopping-basket mr-3"></i>
+                    Mi Lista de Cotización
+                </h3>
+                <button id="close-cart-modal"
+                    class="text-gray-500 hover:text-gray-800 text-3xl font-light">&times;</button>
+            </div>
+
+            <div class="modal-body-geek flex flex-col lg:flex-row gap-8">
+
+                <div class="lg:w-1/2">
+                    <h4 class="text-xl font-bold mb-4 text-dark-text-geek">Servicios Elegidos</h4>
+                    <div id="cart-items-list" class="space-y-4 max-h-72 overflow-y-auto mb-6 p-1">
+                        <p id="cart-empty-message" class="text-gray-500 text-center py-4">Tu lista de cotización está
+                            vacía.</p>
+                    </div>
+                </div>
+
+                <div class="lg:w-1/2">
+                    <h4 class="text-xl font-bold mb-4 text-dark-text-geek border-t lg:border-t-0 pt-4 lg:pt-0">Tus Datos
+                        de Contacto</h4>
+                    <form id="quote-form" class="space-y-4">
+                        <input type="text" id="user-name" placeholder="Tu Nombre Completo" required
+                            class="input-field-geek w-full p-3 border rounded-lg focus:ring-2">
+                        <input type="email" id="user-email" placeholder="Tu Correo Electrónico" required
+                            class="input-field-geek w-full p-3 border rounded-lg focus:ring-2">
+                        <input type="text" id="user-phone" placeholder="Tu Número de WhatsApp (+591...)" required
+                            class="input-field-geek w-full p-3 border rounded-lg focus:ring-2">
+                        <textarea id="user-message" placeholder="¿Tienes alguna pregunta específica? (Opcional)"
+                            rows="3" class="input-field-geek w-full p-3 border rounded-lg focus:ring-2"></textarea>
+
+                        <button type="submit" id="send-quote-btn" disabled
+                            class="btn-whatsapp-geek text-white text-lg font-extrabold py-3 px-6 rounded-xl shadow-xl w-full transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                            <i class="fab fa-whatsapp mr-2 text-2xl"></i> Enviar Cotización Rápida
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div id="quick-quote-modal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden z-50 overflow-y-auto flex justify-center items-center">
+
+        <div id="modal-content-wrapper"
+            class="quick-modal-content-geek relative w-11/12 md:max-w-lg mx-auto rounded-xl shadow-2xl p-8 transform transition-all duration-300 bg-white dark:bg-gray-800">
+        </div>
+    </div>
+    <a href="https://wa.me/59167540115?text=Hola%2C%20me%20interesan%20sus%20servicios%20y%20necesito%20una%20consulta."
+        target="_blank" class="whatsapp-fab" aria-label="Iniciar chat por WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+    <script src="js/main.js"></script>
+    <script src="js/testimonios.js"></script>
+    <script src="js/tema.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/router.js"></script>
+    <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+</body>
+
+</html>
