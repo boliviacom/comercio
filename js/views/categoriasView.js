@@ -1,112 +1,432 @@
 export const categoriasView = {
+    // Variables de estado local para la vista
+    _estado: {
+        busqueda: '',
+        orden: 'asc',
+        paginaActualCat: 1, // Página para Categorías
+        paginaActualSub: 1, // Página para Subcategorías
+        filasPorPagina: 10
+    },
+
     /**
-     * Renderiza la estructura principal de la sección de categorías
+     * MÉTODOS DE NOTIFICACIÓN (SWEETALERT2)
      */
-    render(datos, columnasVisibles) {
+    notificarExito(mensaje) {
+        Swal.fire({
+            icon: 'success',
+            title: '<span class="text-slate-800 font-black uppercase text-sm">¡Operación Exitosa!</span>',
+            text: mensaje,
+            timer: 2000,
+            showConfirmButton: false,
+            customClass: { popup: 'rounded-[32px] border-none shadow-xl' }
+        });
+    },
+
+    notificarError(mensaje) {
+        Swal.fire({
+            icon: 'error',
+            title: '<span class="text-red-600 font-black uppercase text-sm">Error en la Operación</span>',
+            text: mensaje,
+            confirmButtonColor: '#2563eb',
+            customClass: { 
+                popup: 'rounded-[32px] border-none shadow-xl',
+                confirmButton: 'rounded-xl px-6 py-2 font-bold text-xs uppercase' 
+            }
+        });
+    },
+
+    mostrarCargando(mensaje = 'Procesando solicitud...') {
+        Swal.fire({
+            title: '<span class="text-slate-800 font-black uppercase text-sm">Cargando</span>',
+            text: mensaje,
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+            customClass: { popup: 'rounded-[32px] border-none shadow-xl' }
+        });
+    },
+
+    /**
+     * RENDER PRINCIPAL
+     */
+    render(datosPadres, columnasPadres, datosHijos, columnasHijos) {
         const contenedor = document.getElementById('content-area');
         if (!contenedor) return;
 
-        // Limpieza de área y scroll al inicio
-        contenedor.innerHTML = '';
-        contenedor.scrollTop = 0;
+        const activeElementId = document.activeElement?.id;
+        const selectionStart = document.activeElement?.selectionStart;
+
+        // 1. Filtrado y Ordenamiento
+        let padresFiltrados = this._ordenarDatos(this._filtrarDatos(datosPadres));
+        let hijosFiltrados = this._ordenarDatos(this._filtrarDatos(datosHijos));
+
+        const colsPadresFiltradas = columnasPadres.filter(c => c !== 'id' && c !== 'visible');
+        const colsHijosFiltradas = columnasHijos.filter(c => c !== 'id' && c !== 'visible');
 
         const html = `
             <div class="p-8 animate-fade-in">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
-                        <h1 class="text-2xl font-bold text-slate-800">Gestión de Categorías</h1>
-                        <p class="text-slate-500 text-sm">Administra las clasificaciones de tus productos.</p>
+                        <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Categorías - Clasificación de Inventario</h1>
+                        <p class="text-slate-500 text-sm">Organiza y segmenta el catálogo de productos.</p>
                     </div>
-                    
-                    <div class="flex items-center gap-3">
-                        <button id="btn-config-columnas" 
-                            class="flex items-center gap-2 p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
-                            <span class="material-symbols-outlined text-[22px]">view_column</span>
-                            <span class="text-sm font-medium text-slate-600">Columnas</span>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div class="flex gap-2 bg-slate-200/50 p-1 rounded-2xl w-fit border border-slate-200/60">
+                        <button id="tab-categorias" class="tab-btn active flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 bg-white text-blue-600 shadow-sm">
+                            <span class="material-symbols-outlined text-[20px]">folder</span> Categorías
                         </button>
+                        <button id="tab-subcategorias" class="tab-btn flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 text-slate-500 hover:text-slate-700">
+                            <span class="material-symbols-outlined text-[20px]">account_tree</span> Subcategorías
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="relative flex-1 md:w-64">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                            <input type="text" 
+                                   id="input-busqueda"
+                                   placeholder="Buscar por nombre..." 
+                                   value="${this._estado.busqueda}"
+                                   oninput="categoriasView.gestionarBusqueda(this.value)"
+                                   class="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium">
+                        </div>
                         
-                        <button id="btn-nueva-categoria" 
-                            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-100 font-medium text-sm">
-                            <span class="material-symbols-outlined text-[20px]">add</span>
-                            Nueva Categoría
+                        <button onclick="categoriasView.gestionarOrden()" 
+                                title="Orden: ${this._estado.orden === 'asc' ? 'A-Z' : 'Z-A'}"
+                                class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-blue-600 transition-all shadow-sm font-bold text-sm">
+                            <span class="material-symbols-outlined text-lg">${this._estado.orden === 'asc' ? 'sort_by_alpha' : 'text_rotate_vertical'}</span>
+                            ${this._estado.orden === 'asc' ? 'A-Z' : 'Z-A'}
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50/50 border-b border-slate-200">
-                                    <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">#</th>
-                                    ${columnasVisibles.map(col => `
-                                        <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                            ${col.replace(/_/g, ' ')}
-                                        </th>
-                                    `).join('')}
-                                    <th class="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${datos.length > 0 
-                                    ? datos.map((cat, index) => this._crearFila(cat, columnasVisibles, index)).join('')
-                                    : `<tr><td colspan="${columnasVisibles.length + 2}" class="px-6 py-10 text-center text-slate-400 italic text-sm">No se encontraron registros</td></tr>`
-                                }
-                            </tbody>
-                        </table>
+                <div id="seccion-categorias" class="tab-content block animate-fade-in">
+                    ${this._generarSeccionTabla('Categorías', 'btn-config-cat', 'btn-nueva-cat', padresFiltrados, colsPadresFiltradas, 'paginaActualCat')}
+                </div>
+
+                <div id="seccion-subcategorias" class="tab-content hidden animate-fade-in">
+                    ${this._generarSeccionTabla('Subcategorías', 'btn-config-sub', 'btn-nueva-sub', hijosFiltrados, colsHijosFiltradas, 'paginaActualSub')}
+                </div>
+            </div>
+        `;
+        
+        contenedor.innerHTML = html;
+
+        if (activeElementId) {
+            const el = document.getElementById(activeElementId);
+            if (el) {
+                el.focus();
+                if (selectionStart !== undefined && el.setSelectionRange) {
+                    el.setSelectionRange(selectionStart, selectionStart);
+                }
+            }
+        }
+    },
+
+    /**
+     * LÓGICA DE FILTRADO Y ORDEN
+     */
+    _filtrarDatos(datos) {
+        if (!this._estado.busqueda) return [...datos];
+        const term = this._estado.busqueda.toLowerCase();
+        return datos.filter(item => item.nombre.toLowerCase().includes(term));
+    },
+
+    _ordenarDatos(datos) {
+        return [...datos].sort((a, b) => {
+            const nombreA = a.nombre.toLowerCase();
+            const nombreB = b.nombre.toLowerCase();
+            return this._estado.orden === 'asc' ? nombreA.localeCompare(nombreB) : nombreB.localeCompare(nombreA);
+        });
+    },
+
+    gestionarBusqueda(valor) {
+        this._estado.busqueda = valor;
+        this._estado.paginaActualCat = 1; // Resetear página al buscar
+        this._estado.paginaActualSub = 1;
+        categoriasController.refrescarVista();
+    },
+
+    gestionarOrden() {
+        this._estado.orden = this._estado.orden === 'asc' ? 'desc' : 'asc';
+        categoriasController.refrescarVista();
+    },
+
+    cambiarPagina(tipoPagina, nuevaPagina) {
+        this._estado[tipoPagina] = nuevaPagina;
+        categoriasController.refrescarVista();
+    },
+
+    _generarSeccionTabla(tipo, idConfig, idNuevo, datos, columnas, tipoPagina) {
+        const totalRegistros = datos.length;
+        const totalPaginas = Math.ceil(totalRegistros / this._estado.filasPorPagina) || 1;
+        const inicio = (this._estado[tipoPagina] - 1) * this._estado.filasPorPagina;
+        const fin = inicio + this._estado.filasPorPagina;
+        const datosPaginados = datos.slice(inicio, fin);
+
+        return `
+            <div class="flex justify-between items-center mb-4 px-1">
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-[0.15em]">Listado de ${tipo} (${totalRegistros})</h2>
+                <div class="flex items-center gap-3">
+                    <button id="${idConfig}" class="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-blue-600 transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-[22px]">view_column</span>
+                    </button>
+                    <button id="${idNuevo}" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-md font-bold text-sm flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">add</span> Nueva
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse table-auto"> 
+                        <thead>
+                            <tr class="bg-slate-50/80 border-b border-slate-200">
+                                <th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase w-24 text-center">N°</th>
+                                ${columnas.map(col => {
+                                    const minWidth = col === 'nombre' ? 'min-w-[250px]' : 'min-w-[200px]';
+                                    return `<th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase ${minWidth} text-center">${col === 'categoria_padre' ? 'Vinculado a' : col.replace(/_/g, ' ')}</th>`;
+                                }).join('')}
+                                <th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase text-center w-52">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${datosPaginados.length > 0 
+                                ? datosPaginados.map((item, index) => this._crearFila(item, columnas, inicio + index)).join('')
+                                : `<tr><td colspan="10" class="px-6 py-12 text-center text-slate-400 italic text-sm">No se encontraron resultados</td></tr>`
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Mostrando <span class="text-blue-600">${datosPaginados.length}</span> de ${totalRegistros} registros
+                    </p>
+                    <div class="flex gap-2">
+                        <button onclick="categoriasView.cambiarPagina('${tipoPagina}', ${this._estado[tipoPagina] - 1})" 
+                                ${this._estado[tipoPagina] === 1 ? 'disabled' : ''}
+                                class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">
+                            <span class="material-symbols-outlined text-sm">chevron_left</span>
+                        </button>
+                        <div class="flex items-center px-4 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 shadow-sm">
+                            ${this._estado[tipoPagina]} / ${totalPaginas}
+                        </div>
+                        <button onclick="categoriasView.cambiarPagina('${tipoPagina}', ${this._estado[tipoPagina] + 1})" 
+                                ${this._estado[tipoPagina] >= totalPaginas ? 'disabled' : ''}
+                                class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">
+                            <span class="material-symbols-outlined text-sm">chevron_right</span>
+                        </button>
                     </div>
                 </div>
             </div>
         `;
-
-        contenedor.innerHTML = html;
     },
 
-    /**
-     * Crea el HTML para una fila individual
-     */
-    _crearFila(categoria, columnasVisibles, index) {
-        return `
-            <tr class="hover:bg-slate-50/80 transition-colors group">
-                <td class="px-6 py-4 text-sm text-slate-400 font-medium">${index + 1}</td>
-                
-                ${columnasVisibles.map(col => {
-                    const valor = categoria[col];
-                    return `<td class="px-6 py-4 text-sm text-slate-600">${this._formatearCelda(col, valor)}</td>`;
-                }).join('')}
+    _crearFila(item, columnasVisibles, index) {
+        const colorEstado = item.visible ? 'bg-emerald-500' : 'bg-slate-300';
+        const dataString = btoa(unescape(encodeURIComponent(JSON.stringify(item))));
 
-                <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="console.log('Editar ID: ${categoria.id}')" 
-                            class="p-1.5 hover:bg-blue-50 hover:text-blue-600 text-slate-400 rounded-lg transition-colors">
-                            <span class="material-symbols-outlined text-[18px]">edit</span>
-                        </button>
-                        <button onclick="console.log('Eliminar ID: ${categoria.id}')" 
-                            class="p-1.5 hover:bg-red-50 hover:text-red-600 text-slate-400 rounded-lg transition-colors">
-                            <span class="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+        return `
+            <tr class="hover:bg-blue-50/40 transition-colors group">
+                <td class="px-6 py-4 text-sm text-slate-400 font-bold text-center border-r border-slate-50/50">
+                    <div class="flex items-center justify-center gap-3">
+                        <span class="w-2.5 h-2.5 rounded-full ${colorEstado} ring-4 ring-white shadow-sm"></span>
+                        ${index + 1}
                     </div>
                 </td>
-            </tr>
-        `;
+                ${columnasVisibles.map(col => `
+                    <td class="px-6 py-4 text-sm text-slate-600 font-semibold text-center">
+                        <div class="flex justify-center items-center w-full">
+                            ${this._formatearCelda(col, item[col], item)}
+                        </div>
+                    </td>
+                `).join('')}
+                <td class="px-6 py-4">
+                    <div class="flex items-center justify-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <button onclick="categoriasController.editar('${item.id}')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+                        <button onclick="categoriasController.verDetalle('${item.id}')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+                        <button onclick="categoriasView.confirmarEliminacion('${dataString}')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+                    </div>
+                </td>
+            </tr>`;
     },
 
-    /**
-     * Formateador de celdas según tipo de dato
-     */
-    _formatearCelda(columna, valor) {
+    _formatearCelda(columna, valor, item) {
         if (valor === null || valor === undefined) return '<span class="text-slate-300">-</span>';
-
-        if (columna === 'visible') {
-            return valor 
-                ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Público</span>'
-                : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">Oculto</span>';
+        if (columna === 'nombre') return `<span class="text-slate-800 font-bold uppercase text-[13px] tracking-wide block truncate">${valor}</span>`;
+        if (columna === 'categoria_padre') {
+            const nombrePadre = item.nombre_padre || 'Principal';
+            return `<span class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200 uppercase shadow-sm">${nombrePadre}</span>`;
         }
-
-        if (columna === 'id_padre') {
-            return `<span class="text-[11px] font-mono bg-slate-100 px-2 py-1 rounded text-slate-500">ID: ${valor}</span>`;
-        }
-
         return valor;
+    },
+
+    mostrarDetalle(registro) {
+        Swal.fire({
+            title: '<span class="text-slate-800 font-black uppercase text-sm">Detalle del Registro</span>',
+            html: this._getHTMLDetalle(registro),
+            icon: 'info',
+            showCloseButton: true,
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonText: 'Editar Registro',
+            cancelButtonText: 'Cerrar',
+            confirmButtonColor: '#2563eb',
+            customClass: {
+                popup: 'rounded-[32px] border-none shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase order-2',
+                cancelButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase bg-slate-100 text-slate-500 order-1'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.confirmarAccion('¿Desea abrir el editor para este registro?', () => {
+                    categoriasController.editar(registro.id);
+                });
+            }
+        });
+    },
+
+    confirmarEliminacion(dataEncoded) {
+        const registro = JSON.parse(decodeURIComponent(escape(atob(dataEncoded))));
+        
+        Swal.fire({
+            title: '<span class="text-red-600 font-black uppercase text-sm">¿Confirmar Eliminación?</span>',
+            html: `
+                <div class="mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-700 text-[11px] font-bold leading-relaxed">
+                    ATENCIÓN: Esta acción eliminará el registro y sus vinculaciones.
+                </div>
+                ${this._getHTMLDetalle(registro)}
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonText: 'Sí, Eliminar Ahora',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc2626',
+            customClass: {
+                popup: 'rounded-[32px] border-none shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase order-2',
+                cancelButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase bg-slate-100 text-slate-500 order-1'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: '<span class="text-slate-800 font-black uppercase text-sm">Verificación Final</span>',
+                    text: `¿Estás absolutamente seguro de borrar "${registro.nombre.toUpperCase()}"?`,
+                    icon: 'error',
+                    showCancelButton: true,
+                    reverseButtons: true,
+                    confirmButtonText: 'SÍ, BORRAR',
+                    cancelButtonText: 'CANCELAR',
+                    confirmButtonColor: '#000000',
+                    customClass: {
+                        popup: 'rounded-[32px] border-4 border-red-600 shadow-2xl',
+                        confirmButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase',
+                        cancelButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase bg-slate-100 text-slate-500'
+                    }
+                }).then((finalResult) => {
+                    if (finalResult.isConfirmed) {
+                        categoriasController.eliminarRegistro(registro.id);
+                    }
+                });
+            }
+        });
+    },
+
+    _getHTMLDetalle(registro) {
+        return `
+            <div class="text-left space-y-4 p-2">
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nombre</p>
+                    <p class="text-slate-800 font-bold text-lg uppercase">${registro.nombre}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tipo</p>
+                        <p class="text-slate-700 font-bold text-sm">${registro.id_padre ? 'Subcategoría' : 'Categoría'}</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado</p>
+                        <p class="text-emerald-600 font-bold text-sm">Activo</p>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    confirmarAccion(mensaje, callback) {
+        Swal.fire({
+            title: '<span class="text-slate-800 font-black uppercase text-sm">Confirmar Acción</span>',
+            text: mensaje,
+            icon: 'question',
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#2563eb',
+            customClass: {
+                popup: 'rounded-[25px]',
+                confirmButton: 'rounded-xl px-6 py-2 font-bold text-xs uppercase',
+                cancelButton: 'rounded-xl px-6 py-2 font-bold text-xs uppercase bg-slate-100 text-slate-500'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) callback();
+        });
+    },
+
+    async mostrarFormulario({ titulo, nombre = '', id_padre = null, categoriasPadre = [] }) {
+        const options = categoriasPadre
+            .map(cat => `<option value="${cat.id}" ${cat.id === id_padre ? 'selected' : ''}>${cat.nombre.toUpperCase()}</option>`)
+            .join('');
+
+        const svgIcon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E";
+
+        const { value: formValues } = await Swal.fire({
+            title: `<span class="text-slate-800 font-black uppercase text-sm">${titulo}</span>`,
+            html: `
+                <div class="text-left space-y-5 pt-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre</label>
+                        <input id="swal-nombre" type="text" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-2xl p-4 font-semibold uppercase focus:ring-2 focus:ring-blue-500/20 outline-none" value="${nombre}">
+                    </div>
+                    ${categoriasPadre.length > 0 ? `
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Vincular a</label>
+                        <div class="relative">
+                            <select id="swal-id-padre" 
+                                    style="appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url('${svgIcon}'); background-repeat: no-repeat; background-position: right 1.25rem center; background-size: 1.25rem; padding-right: 3rem;" 
+                                    class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-2xl p-4 font-semibold uppercase outline-none cursor-pointer shadow-sm hover:border-slate-300 transition-colors">
+                                <option value="">-- PRINCIPAL --</option>
+                                ${options}
+                            </select>
+                        </div>
+                    </div>` : ''}
+                </div>`,
+            showCloseButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            didOpen: () => document.getElementById('swal-nombre').focus(),
+            customClass: {
+                popup: 'rounded-[32px] border-none shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase bg-blue-600',
+                cancelButton: 'rounded-xl px-6 py-3 font-bold text-sm uppercase bg-slate-100 text-slate-500'
+            },
+            preConfirm: () => {
+                const nombreVal = document.getElementById('swal-nombre').value.trim();
+                if (!nombreVal) { Swal.showValidationMessage('El nombre es obligatorio'); return false; }
+                return { nombre: nombreVal, id_padre: document.getElementById('swal-id-padre')?.value || null };
+            }
+        });
+
+        if (formValues) {
+            return new Promise((resolve) => {
+                this.confirmarAccion('¿Está seguro de guardar estos cambios?', () => resolve(formValues));
+            });
+        }
     }
 };
+
+window.categoriasView = categoriasView;

@@ -56,7 +56,7 @@
                 </div>
                 <div class="mt-4 px-1">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] opacity-70">
-                        Admin Suite v2.4
+                        Admin Suite v1.0
                     </p>
                 </div>
             </div>
@@ -64,40 +64,78 @@
             <nav class="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar flex flex-col gap-6">
 
                 <div class="flex flex-col gap-1">
-                    <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Gestión de Tienda</p>
+                    <p class="px-3 text-[11px] font-bold text-blue-600/70 uppercase tracking-wider mb-2">Inventario</p>
 
                     <details class="group px-1">
-                        <summary class="flex items-center justify-between rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer">
+                        <summary onclick="/* Aquí llamarías a productosController.inicializar() */"
+                            class="flex items-center justify-between rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer list-none">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+                                <p class="text-sm font-medium">Productos</p>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-[18px] transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+
+                        <div class="flex flex-col gap-1 mt-1 ml-4 pl-4 border-l-2 border-slate-100">
+                            <button
+                                class="flex items-center gap-3 rounded-lg px-3 py-1.5 text-slate-400 hover:text-blue-500 transition-all text-[10px] font-bold uppercase">
+                                <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                Añadir Producto
+                            </button>
+                            <button
+                                class="flex items-center gap-3 rounded-lg px-3 py-1.5 text-slate-400 hover:text-orange-500 transition-all text-[10px] font-bold uppercase">
+                                <span class="material-symbols-outlined text-[16px]">upload_file</span>
+                                Carga Masiva (Excel)
+                            </button>
+                        </div>
+                    </details>
+
+                    <details class="group px-1">
+                        <summary onclick="categoriasController.inicializar('categorias')"
+                            class="flex items-center justify-between rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer list-none">
                             <div class="flex items-center gap-3">
                                 <span class="material-symbols-outlined text-[20px]">category</span>
                                 <p class="text-sm font-medium">Categorías</p>
                             </div>
-                            <span class="material-symbols-outlined text-[18px] transition-transform group-open:rotate-180">expand_more</span>
+                            <span
+                                class="material-symbols-outlined text-[18px] transition-transform group-open:rotate-180">expand_more</span>
                         </summary>
-                        
+
                         <div class="flex flex-col gap-1 mt-1 ml-4 pl-4 border-l-2 border-slate-100">
-                            <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-all text-xs font-medium" 
-                               href="#" id="link-categorias-datos">
-                                <span class="material-symbols-outlined text-[18px]">table_rows</span>
-                                Administración de Datos
-                            </a>
-                            <a class="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-all text-xs font-medium" 
-                               href="#" id="link-categorias-columnas">
-                                <span class="material-symbols-outlined text-[18px]">view_column</span>
-                                Configuración de Columnas
-                            </a>
+                            <button
+                                onclick="event.stopPropagation(); categoriasController.mostrarFormularioCreacion('padre')"
+                                class="flex items-center gap-3 rounded-lg px-3 py-1.5 text-slate-400 hover:text-blue-500 transition-all text-[10px] font-bold uppercase">
+                                <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                Nueva Categoría
+                            </button>
                         </div>
                     </details>
 
-                    <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all group"
-                        href="#" data-view="views/productos/index.html" data-type="ajax">
-                        <span class="material-symbols-outlined text-[20px]">inventory_2</span>
-                        <p class="text-sm font-medium">Productos</p>
-                    </a>
+                    <details class="group px-1">
+                        <summary onclick="categoriasController.inicializar('subcategorias')"
+                            class="flex items-center justify-between rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer list-none">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-[20px]">account_tree</span>
+                                <p class="text-sm font-medium">Subcategorías</p>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-[18px] transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+
+                        <div class="flex flex-col gap-1 mt-1 ml-4 pl-4 border-l-2 border-slate-100">
+                            <button
+                                onclick="event.stopPropagation(); categoriasController.mostrarFormularioCreacion('hijo')"
+                                class="flex items-center gap-3 rounded-lg px-3 py-1.5 text-slate-400 hover:text-emerald-500 transition-all text-[10px] font-bold uppercase">
+                                <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                Nueva Subcategoría
+                            </button>
+                        </div>
+                    </details>
                 </div>
 
                 <div class="flex flex-col gap-1">
-                    <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Seguridad y Roles</p>
+                    <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Seguridad</p>
 
                     <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all group"
                         href="#" data-view="views/owners/index.html" data-type="ajax">
@@ -110,35 +148,17 @@
                         <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
                         <p class="text-sm font-medium">Administradores</p>
                     </a>
-
-                    <a class="nav-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all group"
-                        href="#" id="nav-configuracion" data-view="views/configuracion/index.html" data-type="iframe">
-                        <span class="material-symbols-outlined text-[20px]">settings</span>
-                        <p class="text-sm font-medium">Configuración de Página</p>
-                    </a>
                 </div>
             </nav>
 
             <div class="p-4 flex flex-col gap-2 border-t border-slate-100 bg-slate-50/50">
-                <button
-                    class="flex items-center justify-between w-full p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500 hover:text-slate-800 transition-all group border border-transparent hover:border-slate-200">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-[20px] group-hover:rotate-12 transition-transform">dark_mode</span>
-                        <span class="text-sm font-medium">Modo Oscuro</span>
-                    </div>
-                    <div class="w-8 h-4 bg-slate-300 rounded-full relative transition-colors group-hover:bg-blue-200">
-                        <div class="absolute left-1 top-1 w-2 h-2 bg-white rounded-full shadow-sm"></div>
-                    </div>
-                </button>
-
-                <hr class="border-slate-200/60 my-1">
-
                 <div class="flex items-center justify-between gap-3 p-2">
                     <div class="flex items-center gap-3">
                         <div class="relative">
-                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiM4uOpHUrJ5lw2O-iPSswWnEEPqBv7uHHQbvw7h-6m2MombHMtqVSTwpqY7ag84jzwi9M2IvndU4sT0x_ka3Ftp2iihn013ssG_5g2qRoQAduEuDBxaTgau2kyhgangMQuCNlRuAYqMS6ucaW4nMrhK1hJyYwuBAyL3MSTz9ZP05Hn8Ycs26PushjG9rkC_CseSOIl-WzGikz5GopJ43UC-sVfiY3N9bAXCkSW-YTL6Dyke7-Wl4HZGlXCaIuzNAA4cCPQjs1I-VD"
+                            <img src="https://ui-avatars.com/api/?name=Alex+Morgan&background=0D8ABC&color=fff"
                                 alt="Profile" class="h-9 w-9 rounded-full border border-white shadow-sm object-cover" />
-                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                            <span
+                                class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
                         </div>
                         <div class="flex flex-col min-w-0">
                             <p class="text-slate-800 text-sm font-bold truncate">Alex Morgan</p>
@@ -150,11 +170,6 @@
                         <span class="material-symbols-outlined text-[22px]">logout</span>
                     </button>
                 </div>
-
-                <button class="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-blue-600 transition-colors w-full mt-1">
-                    <span class="material-symbols-outlined text-[20px]">keyboard_double_arrow_left</span>
-                    <span class="text-xs font-bold uppercase tracking-widest">Colapsar</span>
-                </button>
             </div>
         </aside>
 
@@ -164,13 +179,15 @@
                     <span class="material-symbols-outlined text-slate-300 text-6xl">dashboard_customize</span>
                     <p class="text-slate-400 font-medium text-center">
                         Bienvenido al Panel Central<br>
-                        <span class="text-sm font-normal">Selecciona una opción a la izquierda para cargar el contenido.</span>
+                        <span class="text-sm font-normal">Selecciona una opción a la izquierda para cargar el
+                            contenido.</span>
                     </p>
                 </div>
             </div>
         </main>
     </div>
     <script type="module" src="js/navigation.js"></script>
+    <script type="module" src="js/controllers/categoriasController.js"></script>
 </body>
 
 </html>

@@ -2,17 +2,32 @@ import { supabase } from '../config/supabaseClient.js';
 
 export const categoriasModel = {
     /**
-     * Obtiene todas las categorías de la base de datos.
+     * Obtiene solo las categorías activas (Soft Delete: visible = true).
+     * Realiza un join para obtener el nombre del padre.
      */
     async obtenerTodas() {
         try {
             const { data, error } = await supabase
                 .from('categoria')
-                .select('*')
+                .select(`
+                    id,
+                    nombre,
+                    visible,
+                    id_padre,
+                    categoria_padre:id_padre (
+                        nombre
+                    )
+                `)
+                .eq('visible', true) // Filtro para ignorar registros "eliminados"
                 .order('nombre', { ascending: true });
 
             if (error) throw error;
-            return data;
+
+            return data.map(item => ({
+                ...item,
+                nombre_padre: item.categoria_padre ? item.categoria_padre.nombre : 'Principal'
+            }));
+
         } catch (err) {
             console.error('Error en categoriasModel.obtenerTodas:', err.message);
             return [];
@@ -20,18 +35,25 @@ export const categoriasModel = {
     },
 
     /**
-     * Obtiene una categoría específica por su ID.
+     * Obtiene una categoría específica por su ID incluyendo datos del padre.
      */
     async obtenerPorId(id) {
         try {
             const { data, error } = await supabase
                 .from('categoria')
-                .select('*')
+                .select(`
+                    *,
+                    categoria_padre:id_padre ( nombre )
+                `)
                 .eq('id', id)
                 .single();
 
             if (error) throw error;
-            return data;
+            
+            return {
+                ...data,
+                nombre_padre: data.categoria_padre ? data.categoria_padre.nombre : 'Ninguna (Es Principal)'
+            };
         } catch (err) {
             console.error(`Error al obtener categoría ${id}:`, err.message);
             return null;
@@ -40,18 +62,24 @@ export const categoriasModel = {
 
     /**
      * Crea una nueva categoría.
-     * @param {Object} categoria - { nombre, visible, id_padre }
      */
     async crear(categoria) {
         try {
+            const payload = {
+                nombre: categoria.nombre.trim(),
+                visible: categoria.visible ?? true,
+                id_padre: categoria.id_padre || null
+            };
+
             const { data, error } = await supabase
                 .from('categoria')
-                .insert([categoria])
+                .insert([payload])
                 .select();
 
             if (error) throw error;
             return { exito: true, data: data[0] };
         } catch (err) {
+            console.error('Error al crear categoría:', err.message);
             return { exito: false, mensaje: err.message };
         }
     },
@@ -61,6 +89,11 @@ export const categoriasModel = {
      */
     async actualizar(id, cambios) {
         try {
+            // Aseguramos que id_padre se maneje correctamente si viene vacío
+            if (cambios.hasOwnProperty('id_padre')) {
+                cambios.id_padre = cambios.id_padre || null;
+            }
+
             const { data, error } = await supabase
                 .from('categoria')
                 .update(cambios)
@@ -70,24 +103,31 @@ export const categoriasModel = {
             if (error) throw error;
             return { exito: true, data: data[0] };
         } catch (err) {
+            console.error('Error al actualizar categoría:', err.message);
             return { exito: false, mensaje: err.message };
         }
     },
 
     /**
-     * Elimina (o desactiva) una categoría.
+     * Realiza un Soft Delete (Cambia visible a false).
+     * Mantenemos el nombre de la función como 'eliminar' para consistencia con el Controller.
      */
     async eliminar(id) {
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('categoria')
-                .delete()
-                .eq('id', id);
+                .update({ visible: false })
+                .eq('id', id)
+                .select();
 
             if (error) throw error;
-            return { exito: true };
+            return { exito: true, data: data[0] };
         } catch (err) {
-            return { exito: false, mensaje: err.message };
+            console.error('Error en Soft Delete:', err.message);
+            return { 
+                exito: false, 
+                mensaje: "No se pudo ocultar el registro: " + err.message 
+            };
         }
     }
 };
