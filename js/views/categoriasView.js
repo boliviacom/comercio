@@ -3,9 +3,10 @@ export const categoriasView = {
     _estado: {
         busqueda: '',
         orden: 'asc',
-        paginaActualCat: 1, // Página para Categorías
-        paginaActualSub: 1, // Página para Subcategorías
-        filasPorPagina: 10
+        paginaActualCat: 1,
+        paginaActualSub: 1,
+        filasPorPagina: 10,
+        pestanaActiva: 'categorias'
     },
 
     /**
@@ -45,6 +46,11 @@ export const categoriasView = {
         });
     },
 
+    cambiarTab(idTab) {
+        this._estado.pestanaActiva = idTab;
+        categoriasController.refrescarVista();
+    },
+
     /**
      * RENDER PRINCIPAL
      */
@@ -55,15 +61,16 @@ export const categoriasView = {
         const activeElementId = document.activeElement?.id;
         const selectionStart = document.activeElement?.selectionStart;
 
-        // 1. Filtrado y Ordenamiento
         let padresFiltrados = this._ordenarDatos(this._filtrarDatos(datosPadres));
         let hijosFiltrados = this._ordenarDatos(this._filtrarDatos(datosHijos));
 
         const colsPadresFiltradas = columnasPadres.filter(c => c !== 'id' && c !== 'visible');
         const colsHijosFiltradas = columnasHijos.filter(c => c !== 'id' && c !== 'visible');
 
+        const esCat = this._estado.pestanaActiva === 'categorias';
+
         const html = `
-            <div class="p-8 animate-fade-in">
+            <div class="p-8 animate-fade-in max-h-[calc(100vh-64px)] overflow-y-auto">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Categorías - Clasificación de Inventario</h1>
@@ -73,10 +80,12 @@ export const categoriasView = {
 
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div class="flex gap-2 bg-slate-200/50 p-1 rounded-2xl w-fit border border-slate-200/60">
-                        <button id="tab-categorias" class="tab-btn active flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 bg-white text-blue-600 shadow-sm">
+                        <button onclick="categoriasView.cambiarTab('categorias')" 
+                            class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${esCat ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}">
                             <span class="material-symbols-outlined text-[20px]">folder</span> Categorías
                         </button>
-                        <button id="tab-subcategorias" class="tab-btn flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 text-slate-500 hover:text-slate-700">
+                        <button onclick="categoriasView.cambiarTab('subcategorias')" 
+                            class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${!esCat ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}">
                             <span class="material-symbols-outlined text-[20px]">account_tree</span> Subcategorías
                         </button>
                     </div>
@@ -101,11 +110,11 @@ export const categoriasView = {
                     </div>
                 </div>
 
-                <div id="seccion-categorias" class="tab-content block animate-fade-in">
+                <div id="seccion-categorias" class="tab-content ${esCat ? 'block' : 'hidden'} animate-fade-in">
                     ${this._generarSeccionTabla('Categorías', 'btn-config-cat', 'btn-nueva-cat', padresFiltrados, colsPadresFiltradas, 'paginaActualCat')}
                 </div>
 
-                <div id="seccion-subcategorias" class="tab-content hidden animate-fade-in">
+                <div id="seccion-subcategorias" class="tab-content ${!esCat ? 'block' : 'hidden'} animate-fade-in">
                     ${this._generarSeccionTabla('Subcategorías', 'btn-config-sub', 'btn-nueva-sub', hijosFiltrados, colsHijosFiltradas, 'paginaActualSub')}
                 </div>
             </div>
@@ -124,9 +133,6 @@ export const categoriasView = {
         }
     },
 
-    /**
-     * LÓGICA DE FILTRADO Y ORDEN
-     */
     _filtrarDatos(datos) {
         if (!this._estado.busqueda) return [...datos];
         const term = this._estado.busqueda.toLowerCase();
@@ -143,7 +149,7 @@ export const categoriasView = {
 
     gestionarBusqueda(valor) {
         this._estado.busqueda = valor;
-        this._estado.paginaActualCat = 1; // Resetear página al buscar
+        this._estado.paginaActualCat = 1;
         this._estado.paginaActualSub = 1;
         categoriasController.refrescarVista();
     },
@@ -178,8 +184,8 @@ export const categoriasView = {
                 </div>
             </div>
 
-            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
+            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-8">
+                <div class="overflow-x-auto"> 
                     <table class="w-full text-left border-collapse table-auto"> 
                         <thead>
                             <tr class="bg-slate-50/80 border-b border-slate-200">
@@ -245,9 +251,9 @@ export const categoriasView = {
                 `).join('')}
                 <td class="px-6 py-4">
                     <div class="flex items-center justify-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <button onclick="categoriasController.editar('${item.id}')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">edit</span></button>
-                        <button onclick="categoriasController.verDetalle('${item.id}')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
-                        <button onclick="categoriasView.confirmarEliminacion('${dataString}')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+                        <button onclick="categoriasController.editar('${item.id}')" title="Editar" class="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+                        <button onclick="categoriasView.verDetalle('${item.id}')" title="Ver Detalle" class="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+                        <button onclick="categoriasView.confirmarEliminacion('${dataString}')" title="Eliminar" class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all shadow-sm"><span class="material-symbols-outlined text-[18px]">delete</span></button>
                     </div>
                 </td>
             </tr>`;
@@ -261,6 +267,10 @@ export const categoriasView = {
             return `<span class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black border border-slate-200 uppercase shadow-sm">${nombrePadre}</span>`;
         }
         return valor;
+    },
+
+    verDetalle(id) {
+        categoriasController.verDetalle(id);
     },
 
     mostrarDetalle(registro) {
@@ -281,7 +291,7 @@ export const categoriasView = {
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                this.confirmarAccion('¿Desea abrir el editor para este registro?', () => {
+                this.confirmarAccion('¿Está seguro que desea editar este registro?', () => {
                     categoriasController.editar(registro.id);
                 });
             }
@@ -349,7 +359,7 @@ export const categoriasView = {
                     </div>
                     <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado</p>
-                        <p class="text-emerald-600 font-bold text-sm">Activo</p>
+                        <p class="text-emerald-600 font-bold text-sm">${registro.visible ? 'Activo' : 'Inactivo'}</p>
                     </div>
                 </div>
             </div>`;
@@ -376,6 +386,7 @@ export const categoriasView = {
     },
 
     async mostrarFormulario({ titulo, nombre = '', id_padre = null, categoriasPadre = [] }) {
+        const esSubcategoria = this._estado.pestanaActiva === 'subcategorias';
         const options = categoriasPadre
             .map(cat => `<option value="${cat.id}" ${cat.id === id_padre ? 'selected' : ''}>${cat.nombre.toUpperCase()}</option>`)
             .join('');
@@ -390,14 +401,14 @@ export const categoriasView = {
                         <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre</label>
                         <input id="swal-nombre" type="text" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-2xl p-4 font-semibold uppercase focus:ring-2 focus:ring-blue-500/20 outline-none" value="${nombre}">
                     </div>
-                    ${categoriasPadre.length > 0 ? `
+                    ${esSubcategoria ? `
                     <div class="flex flex-col gap-2">
-                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Vincular a</label>
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Seleccionar Categoría Padre (Obligatorio)</label>
                         <div class="relative">
                             <select id="swal-id-padre" 
                                     style="appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url('${svgIcon}'); background-repeat: no-repeat; background-position: right 1.25rem center; background-size: 1.25rem; padding-right: 3rem;" 
                                     class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-2xl p-4 font-semibold uppercase outline-none cursor-pointer shadow-sm hover:border-slate-300 transition-colors">
-                                <option value="">-- PRINCIPAL --</option>
+                                <option value="">-- ELIJA UNA CATEGORÍA --</option>
                                 ${options}
                             </select>
                         </div>
@@ -416,8 +427,20 @@ export const categoriasView = {
             },
             preConfirm: () => {
                 const nombreVal = document.getElementById('swal-nombre').value.trim();
-                if (!nombreVal) { Swal.showValidationMessage('El nombre es obligatorio'); return false; }
-                return { nombre: nombreVal, id_padre: document.getElementById('swal-id-padre')?.value || null };
+                const selectPadre = document.getElementById('swal-id-padre');
+                const padreVal = selectPadre ? selectPadre.value : null;
+
+                if (!nombreVal) { 
+                    Swal.showValidationMessage('El nombre es obligatorio'); 
+                    return false; 
+                }
+
+                if (esSubcategoria && !padreVal) {
+                    Swal.showValidationMessage('Debe seleccionar una categoría obligatoriamente');
+                    return false;
+                }
+
+                return { nombre: nombreVal, id_padre: padreVal };
             }
         });
 

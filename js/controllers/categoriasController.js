@@ -3,23 +3,23 @@ import { configuracionColumnasController } from './configuracionColumnasControll
 import { categoriasView } from '../views/categoriasView.js';
 
 export const categoriasController = {
+    // Definimos las columnas que el código necesita pero el usuario no debe configurar
+    COLUMNAS_TECNICAS: ['id', 'visible'],
+
     COLUMNAS_PADRES: ['id', 'nombre', 'visible'],
     COLUMNAS_HIJOS: ['id', 'nombre', 'categoria_padre', 'visible'],
     REF_PADRES: 'categorias_padre',
     REF_HIJOS: 'subcategorias',
 
-    // --- PROPIEDADES DE ESTADO (Caché en memoria) ---
     _datosPadres: [],
     _datosHijos: [],
     _colsPadres: [],
     _colsHijos: [],
 
-    /**
-     * Inicialización completa: Carga datos de la BD y columnas de configuración.
-     */
     async inicializar(pestanaPorDefecto = 'categorias') {
         try {
-            Swal.showLoading();
+            // Usamos la notificación de la vista para mantener consistencia visual
+            categoriasView.mostrarCargando('Cargando catálogo...');
 
             // 1. Cargar configuración de columnas
             this._colsPadres = await configuracionColumnasController.obtenerColumnasVisibles(this.REF_PADRES, ['nombre']);
@@ -30,28 +30,24 @@ export const categoriasController = {
             this._datosPadres = todas.filter(c => !c.id_padre);
             this._datosHijos = todas.filter(c => c.id_padre);
 
-            // 3. Renderizar por primera vez
-            this.refrescarVista();
+            // 3. Sincronizar la pestaña en el estado de la vista
+            categoriasView._estado.pestanaActiva = pestanaPorDefecto;
 
-            // 4. Manejo de pestañas
-            if (pestanaPorDefecto === 'subcategorias') {
-                this.activarPestanaSubcategorias();
-            }
+            // 4. Renderizar
+            this.refrescarVista();
 
             Swal.close();
         } catch (error) {
             console.error("Error al inicializar:", error);
-            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar los datos.' });
+            categoriasView.notificarError('No se pudieron cargar los datos.');
         }
     },
 
     /**
-     * MÉTODO OPTIMIZADO: Refresca la interfaz sin recargar datos de la BD.
-     * Esencial para que el buscador funcione con fluidez.
+     * REFRESCO DE VISTA
      */
     refrescarVista() {
-        // Le pasamos los datos en memoria a la vista. 
-        // La vista se encargará de filtrar por "this._estado.busqueda" internamente.
+        // Pasamos los datos completos; la vista hará el .slice() de la paginación internamente
         categoriasView.render(
             this._datosPadres, 
             this._colsPadres, 
@@ -59,14 +55,11 @@ export const categoriasController = {
             this._colsHijos
         );
         
-        // Re-vinculamos los eventos que se pierden al sobreescribir el innerHTML
+        // Mantenemos tus configuraciones de eventos
         this._setupEventListeners();
-        this._setupTabLogic();
+        this._setupTabLogic(); 
     },
 
-    /**
-     * ACCIÓN: VER
-     */
     async verDetalle(id) {
         const registro = await categoriasModel.obtenerPorId(id);
         if (registro) {
@@ -74,63 +67,63 @@ export const categoriasController = {
         }
     },
 
-    /**
-     * ACCIÓN: ELIMINAR
-     */
     async eliminarRegistro(id) {
         const res = await categoriasModel.eliminar(id);
         if (res.exito) {
-            Swal.fire({ title: '¡Eliminado!', icon: 'success', timer: 1000, showConfirmButton: false });
-            // Aquí sí reinicializamos para obtener la lista actualizada de la BD
-            this.inicializar(); 
+            categoriasView.notificarExito('Registro eliminado correctamente');
+            // Recargamos manteniendo la pestaña actual del estado de la vista
+            this.inicializar(categoriasView._estado.pestanaActiva); 
         } else {
-            Swal.fire('Error', res.mensaje, 'error');
+            categoriasView.notificarError(res.mensaje);
         }
     },
 
-    /**
-     * ACCIÓN: CREAR
-     */
     async mostrarFormularioCreacion(tipo) {
-        // Usamos los padres que ya tenemos en memoria
+        // Informamos a la vista en qué pestaña estamos antes de abrir el form
+        categoriasView._estado.pestanaActiva = (tipo === 'padre') ? 'categorias' : 'subcategorias';
+
         const datos = await categoriasView.mostrarFormulario({
             titulo: tipo === 'padre' ? 'Nueva Categoría Principal' : 'Nueva Subcategoría',
-            categoriasPadre: tipo === 'hijo' ? this._datosPadres : []
+            categoriasPadre: this._datosPadres
         });
 
         if (datos) {
             const res = await categoriasModel.crear(datos);
             if (res.exito) {
-                this.inicializar();
-                Swal.fire('Guardado', 'Registro creado con éxito', 'success');
+                this.inicializar(categoriasView._estado.pestanaActiva);
+                categoriasView.notificarExito('Registro creado con éxito');
+            } else {
+                categoriasView.notificarError('No se pudo crear el registro');
             }
         }
     },
 
-    /**
-     * ACCIÓN: EDITAR
-     */
     async editar(id) {
         const registro = await categoriasModel.obtenerPorId(id);
         const padresDisponibles = this._datosPadres.filter(c => c.id !== id);
+
+        // Si el registro tiene id_padre, es una subcategoría
+        categoriasView._estado.pestanaActiva = registro.id_padre ? 'subcategorias' : 'categorias';
 
         const nuevosDatos = await categoriasView.mostrarFormulario({
             titulo: 'Editar Registro',
             nombre: registro.nombre,
             id_padre: registro.id_padre,
-            categoriasPadre: registro.id_padre ? padresDisponibles : []
+            categoriasPadre: padresDisponibles 
         });
 
         if (nuevosDatos) {
             const res = await categoriasModel.actualizar(id, nuevosDatos);
             if (res.exito) {
-                this.inicializar();
-                Swal.fire('Actualizado', 'Los cambios se han guardado', 'success');
+                this.inicializar(categoriasView._estado.pestanaActiva);
+                categoriasView.notificarExito('Cambios guardados correctamente');
+            } else {
+                categoriasView.notificarError('Error al actualizar');
             }
         }
     },
 
-    // --- LÓGICA DE INTERFAZ Y EVENTOS ---
+    // --- LÓGICA DE INTERFAZ Y EVENTOS (Mantenida intacta) ---
 
     activarPestanaSubcategorias() {
         const btnSub = document.getElementById('tab-subcategorias');
@@ -139,6 +132,7 @@ export const categoriasController = {
         const secCat = document.getElementById('seccion-categorias');
         if (btnSub && secSub) {
             this._ejecutarCambioVisualPestana(btnSub, btnCat, secSub, secCat);
+            categoriasView._estado.pestanaActiva = 'subcategorias';
         }
     },
 
@@ -150,8 +144,14 @@ export const categoriasController = {
         
         if (!btnCat || !btnSub) return;
 
-        btnCat.onclick = () => this._ejecutarCambioVisualPestana(btnCat, btnSub, secCat, secSub);
-        btnSub.onclick = () => this._ejecutarCambioVisualPestana(btnSub, btnCat, secSub, secCat);
+        btnCat.onclick = () => {
+            this._ejecutarCambioVisualPestana(btnCat, btnSub, secCat, secSub);
+            categoriasView._estado.pestanaActiva = 'categorias';
+        };
+        btnSub.onclick = () => {
+            this._ejecutarCambioVisualPestana(btnSub, btnCat, secSub, secCat);
+            categoriasView._estado.pestanaActiva = 'subcategorias';
+        };
     },
 
     _ejecutarCambioVisualPestana(activeBtn, inactiveBtn, showSec, hideSec) {
@@ -164,7 +164,6 @@ export const categoriasController = {
     },
 
     _setupEventListeners() {
-        // Usamos addEventListener para evitar conflictos si se llama varias veces
         const configCat = document.getElementById('btn-config-cat');
         const nuevaCat = document.getElementById('btn-nueva-cat');
         const configSub = document.getElementById('btn-config-sub');
@@ -177,7 +176,12 @@ export const categoriasController = {
     },
 
     async abrirConfiguracionColumnas(tablaRef, columnasTotales) {
-        await configuracionColumnasController.abrirSelectorColumnas(tablaRef, columnasTotales, () => this.inicializar());
+        // Filtrar las columnas para el selector: No mostramos 'id' ni 'visible'
+        const columnasParaMostrarAlOwner = columnasTotales.filter(col => !this.COLUMNAS_TECNICAS.includes(col));
+
+        await configuracionColumnasController.abrirSelectorColumnas(tablaRef, columnasParaMostrarAlOwner, () => {
+            this.inicializar(categoriasView._estado.pestanaActiva);
+        });
     }
 };
 
