@@ -5,7 +5,7 @@
  */
 
 // CORRECCIÓN DE RUTA: Subimos un nivel para encontrar la carpeta modals
-import { createProduct } from '../modals/createProduct.js';
+import { productManager } from '../modals/createProduct.js';
 
 export const productoView = {
     _estado: {
@@ -481,4 +481,4 @@ export const productoView = {
 };
 
 window.productoView = productoView;
-window.createProduct = createProduct;
+window.productManager = productManager;

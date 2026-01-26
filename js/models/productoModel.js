@@ -8,28 +8,41 @@ export const productoModel = {
 
     /**
      * Obtiene productos usando la VISTA especializada.
-     * Esto resuelve automáticamente la jerarquía Padre > Hijo.
+     * Corregido: Filtra duplicados si un producto tiene múltiples categorías.
      */
     async listarActivos() {
         try {
             const { data, error } = await supabase
-                .from('v_productos_detallados') // Usamos tu nueva vista
+                .from('v_productos_detallados') // Usamos tu vista
                 .select('*')
                 .eq('visible', true)
                 .order('producto_id', { ascending: false });
 
             if (error) throw error;
 
-            // Mapeamos para mantener compatibilidad con el resto de la App
-            return data.map(p => ({
-                ...p,
-                id: p.producto_id, // La vista usa producto_id, mapeamos a id
-                nombre: p.producto_nombre,
-                // Si existe un padre, mostramos la ruta completa
-                nombre_categoria: p.categoria_padre_nombre 
-                    ? `${p.categoria_padre_nombre} > ${p.categoria_nombre}`
-                    : (p.categoria_nombre || 'Sin Categoría')
-            }));
+            // --- LÓGICA DE UNICIDAD PARA EVITAR REPETIDOS ---
+            const productosUnicos = [];
+            const idsProcesados = new Set();
+
+            data.forEach(p => {
+                if (!idsProcesados.has(p.producto_id)) {
+                    idsProcesados.add(p.producto_id);
+                    
+                    // Mapeamos para mantener compatibilidad con el resto de la App
+                    productosUnicos.push({
+                        ...p,
+                        id: p.producto_id, // La vista usa producto_id, mapeamos a id
+                        nombre: p.producto_nombre,
+                        // Si existe un padre, mostramos la ruta completa
+                        nombre_categoria: p.categoria_padre_nombre 
+                            ? `${p.categoria_padre_nombre} > ${p.categoria_nombre}`
+                            : (p.categoria_nombre || 'Sin Categoría')
+                    });
+                }
+            });
+
+            return productosUnicos;
+            // -----------------------------------------------
         } catch (err) {
             console.error('Error en productoModel.listarActivos (Vista):', err.message);
             return [];
@@ -153,7 +166,7 @@ export const productoModel = {
     },
 
     /**
-     * ACTUALIZACIÓN POR FILTRO (Nuevo método necesario para el Controller)
+     * ACTUALIZACIÓN POR FILTRO
      * Actualiza solo un grupo específico de IDs
      */
     async actualizarVarios(ids, datos) {
