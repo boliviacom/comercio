@@ -2,25 +2,23 @@ import { supabase } from '../config/supabaseClient.js';
 
 /**
  * Producto Model - Nexus Admin Suite
- * Versión con Soporte para Vista SQL (Lectura) y Tablas Base (Escritura)
+ * Versión corregida para Mapeo de Switches y Soporte de Multimedia
  */
 export const productoModel = {
 
     /**
      * Obtiene productos usando la VISTA especializada.
-     * Corregido: Filtra duplicados si un producto tiene múltiples categorías.
      */
     async listarActivos() {
         try {
             const { data, error } = await supabase
-                .from('v_productos_detallados') // Usamos tu vista
+                .from('v_productos_detallados')
                 .select('*')
                 .eq('visible', true)
                 .order('producto_id', { ascending: false });
 
             if (error) throw error;
 
-            // --- LÓGICA DE UNICIDAD PARA EVITAR REPETIDOS ---
             const productosUnicos = [];
             const idsProcesados = new Set();
 
@@ -28,12 +26,10 @@ export const productoModel = {
                 if (!idsProcesados.has(p.producto_id)) {
                     idsProcesados.add(p.producto_id);
                     
-                    // Mapeamos para mantener compatibilidad con el resto de la App
                     productosUnicos.push({
                         ...p,
-                        id: p.producto_id, // La vista usa producto_id, mapeamos a id
+                        id: p.producto_id,
                         nombre: p.producto_nombre,
-                        // Si existe un padre, mostramos la ruta completa
                         nombre_categoria: p.categoria_padre_nombre 
                             ? `${p.categoria_padre_nombre} > ${p.categoria_nombre}`
                             : (p.categoria_nombre || 'Sin Categoría')
@@ -42,15 +38,14 @@ export const productoModel = {
             });
 
             return productosUnicos;
-            // -----------------------------------------------
         } catch (err) {
-            console.error('Error en productoModel.listarActivos (Vista):', err.message);
+            console.error('Error en productoModel.listarActivos:', err.message);
             return [];
         }
     },
 
     /**
-     * Obtiene un producto por ID usando la vista para traer detalle completo
+     * Obtiene un producto por ID usando la vista
      */
     async obtenerPorId(id) {
         try {
@@ -61,29 +56,33 @@ export const productoModel = {
                 .single();
 
             if (error) throw error;
-            
-            // Normalizamos el ID para el resto del sistema
             return { ...data, id: data.producto_id };
         } catch (err) {
-            console.error(`Error al obtener producto ${id} desde vista:`, err.message);
+            console.error(`Error al obtener producto ${id}:`, err.message);
             return null;
         }
     },
 
     /**
-     * Actualiza un producto (IMPORTANTE: Se usa la tabla base, no la vista)
+     * Actualiza un producto (Tabla base: producto)
+     * CORREGIDO: Mapeo de ws_active y price_visible
      */
     async actualizar(id, cambios) {
         try {
-            if (cambios.precio !== undefined) cambios.precio = parseFloat(cambios.precio);
-            if (cambios.stock !== undefined) cambios.stock = parseInt(cambios.stock);
-            
-            // Limpiamos campos que vienen de la vista y no pertenecen a la tabla física
-            const { 
-                producto_id, producto_nombre, nombre_categoria, 
-                categoria_nombre, categoria_padre_nombre, categoria_padre_id,
-                categoria_id, ...datosLimpios 
-            } = cambios;
+            // Construimos el payload traduciendo los nombres del componente a la DB
+            const datosLimpios = {
+                nombre: cambios.nombre,
+                descripcion: cambios.descripcion,
+                precio: cambios.precio !== undefined ? parseFloat(cambios.precio) : undefined,
+                stock: cambios.stock !== undefined ? parseInt(cambios.stock) : undefined,
+                imagen_url: cambios.portada, // Mapeo de portada -> imagen_url
+                // Mapeo de booleanos (acepta 1/0 o true/false)
+                mostrar_precio: cambios.price_visible !== undefined ? (cambios.price_visible == 1 || cambios.price_visible === true) : undefined,
+                habilitar_whatsapp: cambios.ws_active !== undefined ? (cambios.ws_active == 1 || cambios.ws_active === true) : undefined
+            };
+
+            // Eliminamos propiedades undefined para no enviar basura a Supabase
+            Object.keys(datosLimpios).forEach(key => datosLimpios[key] === undefined && delete datosLimpios[key]);
 
             const { data, error } = await supabase
                 .from('producto')
@@ -100,19 +99,21 @@ export const productoModel = {
     },
 
     /**
-     * Crea un nuevo registro (Tabla base)
+     * Crea un nuevo registro (Tabla base: producto)
+     * CORREGIDO: Mapeo de campos iniciales
      */
     async crear(datos) {
         try {
             const payload = {
-                nombre: datos.nombre.trim(),
+                nombre: datos.nombre ? datos.nombre.trim() : 'Sin Nombre',
                 descripcion: datos.descripcion || '',
-                imagen_url: datos.imagen_url || '',
+                imagen_url: datos.portada || '', 
                 precio: parseFloat(datos.precio) || 0,
                 stock: parseInt(datos.stock) || 0,
                 visible: true,
-                mostrar_precio: datos.mostrar_precio ?? true,
-                habilitar_whatsapp: datos.habilitar_whatsapp ?? false
+                // Mapeo de nombres desde el componente
+                mostrar_precio: datos.price_visible == 1 || datos.price_visible === true,
+                habilitar_whatsapp: datos.ws_active == 1 || datos.ws_active === true
             };
 
             const { data, error } = await supabase
@@ -129,7 +130,7 @@ export const productoModel = {
     },
 
     /**
-     * Víncula producto con categoría (Tabla intermedia)
+     * Víncula producto con categoría
      */
     async vincularCategoria(id_producto, id_categoria) {
         try {
@@ -146,14 +147,18 @@ export const productoModel = {
     },
 
     /**
-     * Actualización Masiva (Tabla base)
-     * Actualiza TODOS los productos visibles
+     * Actualización Masiva
      */
     async actualizarMasivo(campo, valor) {
         try {
+            // Traducir campo si viene del componente
+            let campoReal = campo;
+            if (campo === 'ws_active') campoReal = 'habilitar_whatsapp';
+            if (campo === 'price_visible') campoReal = 'mostrar_precio';
+
             const { data, error } = await supabase
                 .from('producto')
-                .update({ [campo]: valor })
+                .update({ [campoReal]: valor })
                 .eq('visible', true)
                 .select();
 
@@ -166,7 +171,6 @@ export const productoModel = {
     },
 
     /**
-     * ACTUALIZACIÓN POR FILTRO
      * Actualiza solo un grupo específico de IDs
      */
     async actualizarVarios(ids, datos) {
@@ -179,13 +183,13 @@ export const productoModel = {
             if (error) throw error;
             return { exito: true, data };
         } catch (err) {
-            console.error("Error en actualizarVarios (Model):", err.message);
+            console.error("Error en actualizarVarios:", err.message);
             return { exito: false, mensaje: err.message };
         }
     },
 
     /**
-     * Soft Delete (Tabla base)
+     * Soft Delete
      */
     async eliminar(id) {
         try {
