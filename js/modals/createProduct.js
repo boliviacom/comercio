@@ -1,6 +1,6 @@
 /**
  * Nexus Admin Suite V6.8 - Multimedia & Preview Optimization
- * Actualización: Integración de Proporciones Dinámicas (YT, FB, IG, TK)
+ * Actualización: Cámara Pro con Temporizador y Límite de 1:50
  */
 export const productManager = {
     _galeriaArchivos: [],
@@ -13,14 +13,162 @@ export const productManager = {
     _mainContainer: null,
     _searchTerm: '',
 
+    // --- MOTOR DE CÁMARA INTEGRADO ---
+    _cameraEngine: {
+        _ffmpeg: null,
+        _stream: null,
+        _timerInterval: null,
+        async init() {
+            if (this._ffmpeg) return;
+            try {
+                this._ffmpeg = FFmpeg.createFFmpeg({ log: false });
+                await this._ffmpeg.load();
+            } catch (e) { console.error("FFmpeg Load Error:", e); }
+        },
+        async abrir(modo = 'video') {
+            return new Promise(async (resolve) => {
+                const esVideo = modo === 'video';
+                const modalHtml = `
+                <div class="camera-container" style="background:#000; border-radius:2.5rem; overflow:hidden; position:relative; min-height: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+                    <video id="n-video" autoplay muted playsinline style="width:100%; height:auto; max-height:70vh; object-fit:cover;"></video>
+                    
+                    <div id="n-overlay" style="display:none; position:absolute; top:30px; left:30px; right:30px; flex-direction:column; gap:15px; z-index:10;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="color:red; font-weight:900; background:rgba(0,0,0,0.7); padding:8px 20px; border-radius:30px; font-size:12px; display:flex; align-items:center; gap:8px; border:1px solid rgba(255,0,0,0.5); letter-spacing:1px;">
+                                <span style="animation: n-pulse 1s infinite; font-size:18px;">●</span> GRABANDO
+                            </div>
+                            <div id="n-timer" style="color:white; font-weight:900; background:rgba(0,0,0,0.7); padding:8px 20px; border-radius:30px; font-size:14px; font-family:monospace; backdrop-filter:blur(5px);">00:00 / 01:50</div>
+                        </div>
+                        <div style="width:100%; height:6px; background:rgba(255,255,255,0.2); border-radius:10px; overflow:hidden;">
+                            <div id="n-progress" style="width:0%; height:100%; background:#dc2626; transition: width 1s linear;"></div>
+                        </div>
+                    </div>
+
+                    <div style="padding:35px; display:flex; justify-content:center; gap:30px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+                        ${!esVideo ? `
+                            <button id="n-btn-snap" class="shadow-2xl hover:scale-110 active:scale-95 transition-all" style="width:80px; height:80px; border-radius:50%; background:#2563eb; color:white; border:8px solid #dbeafe; cursor:pointer; display:flex; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:35px;">photo_camera</span></button>
+                        ` : `
+                            <button id="n-btn-rec" class="shadow-2xl hover:scale-110 active:scale-95 transition-all" style="width:80px; height:80px; border-radius:50%; background:#dc2626; color:white; border:8px solid #fee2e2; cursor:pointer; display:flex; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:35px;">videocam</span></button>
+                            <button id="n-btn-stop" style="display:none; width:80px; height:80px; border-radius:50%; background:#0f172a; color:white; border:8px solid #e2e8f0; cursor:pointer; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:35px;">stop</span></button>
+                        `}
+                    </div>
+                    <style>
+                        @keyframes n-pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+                    </style>
+                </div>`;
+
+                Swal.fire({
+                    title: esVideo ? 'NEXUS VIDEO RECORDER' : 'NEXUS PHOTO STUDIO',
+                    html: modalHtml,
+                    showConfirmButton: false,
+                    width: '900px', // Modal expandido
+                    background: '#f8fafc',
+                    padding: '0',
+                    didOpen: async () => {
+                        const videoEl = document.getElementById('n-video');
+                        const btnSnap = document.getElementById('n-btn-snap');
+                        const btnRec = document.getElementById('n-btn-rec');
+                        const btnStop = document.getElementById('n-btn-stop');
+                        const overlay = document.getElementById('n-overlay');
+                        const timerEl = document.getElementById('n-timer');
+                        const progressEl = document.getElementById('n-progress');
+
+                        try {
+                            this._stream = await navigator.mediaDevices.getUserMedia({
+                                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+                                audio: esVideo
+                            });
+                            videoEl.srcObject = this._stream;
+                        } catch (err) {
+                            console.error("Error acceso cámara:", err);
+                            Swal.fire('Error', 'No se pudo acceder a la cámara o micrófono', 'error');
+                        }
+
+                        if (!esVideo) {
+                            btnSnap.onclick = () => {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = videoEl.videoWidth;
+                                canvas.height = videoEl.videoHeight;
+                                canvas.getContext('2d').drawImage(videoEl, 0, 0);
+                                canvas.toBlob(async (blob) => {
+                                    const res = await this.procesar(blob, 'imagen');
+                                    resolve(res);
+                                    Swal.close();
+                                }, 'image/jpeg', 0.95);
+                            };
+                        } else {
+                            let chunks = [];
+                            let seconds = 0;
+                            const limit = 110; // 1:50 en segundos
+
+                            btnRec.onclick = () => {
+                                const recorder = new MediaRecorder(this._stream);
+                                recorder.ondataavailable = e => chunks.push(e.data);
+                                recorder.onstop = async () => {
+                                    clearInterval(this._timerInterval);
+                                    const blob = new Blob(chunks, { type: 'video/webm' });
+                                    const res = await this.procesar(blob, 'video');
+                                    resolve(res);
+                                };
+
+                                recorder.start();
+                                btnRec.style.display = 'none';
+                                btnStop.style.display = 'flex';
+                                overlay.style.display = 'flex';
+
+                                this._timerInterval = setInterval(() => {
+                                    seconds++;
+                                    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                                    const secs = (seconds % 60).toString().padStart(2, '0');
+                                    const percent = (seconds / limit) * 100;
+                                    
+                                    timerEl.innerText = `${mins}:${secs} / 01:50`;
+                                    progressEl.style.width = `${percent}%`;
+
+                                    if (seconds >= limit) {
+                                        recorder.stop();
+                                        Swal.close();
+                                    }
+                                }, 1000);
+
+                                btnStop.onclick = () => { recorder.stop(); Swal.close(); };
+                            };
+                        }
+                    },
+                    willClose: () => { 
+                        if (this._stream) this._stream.getTracks().forEach(t => t.stop()); 
+                        if (this._timerInterval) clearInterval(this._timerInterval);
+                    }
+                });
+            });
+        },
+        async procesar(blob, tipo) {
+            const nombre = `nexus_${Date.now()}.${tipo === 'video' ? 'mp4' : 'jpg'}`;
+            let fileFinal = blob;
+
+            if (tipo === 'video') {
+                Swal.showLoading();
+                await this.init();
+                if (this._ffmpeg) {
+                    this._ffmpeg.FS('writeFile', 'in.webm', await FFmpeg.fetchFile(blob));
+                    await this._ffmpeg.run('-i', 'in.webm', '-vcodec', 'libx264', '-crf', '28', '-preset', 'ultrafast', 'out.mp4');
+                    const data = this._ffmpeg.FS('readFile', 'out.mp4');
+                    fileFinal = new File([data.buffer], nombre, { type: 'video/mp4' });
+                }
+            } else {
+                fileFinal = new File([blob], nombre, { type: 'image/jpeg' });
+            }
+            return { archivo: fileFinal, url: URL.createObjectURL(fileFinal), tipo, nombre };
+        }
+    },
+
     async start(containerId, categorias, dPrevios = {}) {
         this._mainContainer = document.getElementById(containerId);
         if (!this._mainContainer) return;
         this._originalContent = this._mainContainer.innerHTML;
         window.categoriasRaw = categorias;
-        
         this._pasoActual = 1;
-        this._datosTemporales = { 
+        this._datosTemporales = {
             nombre: dPrevios.nombre || '',
             precio: dPrevios.precio || '',
             stock: dPrevios.stock || 0,
@@ -29,22 +177,23 @@ export const productManager = {
             price_visible: dPrevios.price_visible !== undefined ? dPrevios.price_visible : true,
             id: dPrevios.id || null
         };
-
         this._categoriasSeleccionadas = dPrevios.categoriasIds || [];
-        
-        this._galeriaArchivos = (dPrevios.galeria || []).map(item => ({
-            id: item.id || Date.now().toString() + Math.random(),
-            tipo: item.tipo || 'imagen',
-            url: item.url || item.file_url,
-            file: null,
-            thumb: item.tipo === 'video' ? this.obtenerInfoVideo(item.url || item.file_url).thumb : (item.url || item.file_url),
-            nombre: item.nombre || 'Archivo existente',
-            orden: item.orden || 0
-        }));
-        
+        this._galeriaArchivos = (dPrevios.galeria || []).map(item => {
+            const info = this.obtenerInfoVideo(item.url || item.file_url);
+            return {
+                id: item.id || Date.now().toString() + Math.random(),
+                tipo: item.tipo || 'imagen',
+                url: item.url || item.file_url,
+                file: null,
+                thumb: item.tipo === 'video' ? info.thumb : (item.url || item.file_url),
+                nombre: item.nombre || 'Archivo existente',
+                orden: item.orden || 0
+            };
+        });
+
         if (dPrevios.imagen_url || dPrevios.portada) {
             const path = dPrevios.imagen_url || dPrevios.portada;
-            this._portadaArchivo = typeof path === 'string' 
+            this._portadaArchivo = typeof path === 'string'
                 ? { tipo: 'url', url: path, data: null }
                 : { tipo: 'local', data: path, url: URL.createObjectURL(path) };
         } else {
@@ -52,135 +201,154 @@ export const productManager = {
         }
 
         this.render();
-        this.injectStyles(); 
+        this.injectStyles();
         return new Promise((resolve) => { this._resolve = resolve; });
     },
 
-    // 1. Identificación y Miniaturas (Lógica Actualizada)
-    obtenerInfoVideo(url) {
-        if (!url || typeof url !== 'string') return { tipo: 'desconocido', thumb: '' };
-
-        // Detección de YouTube (Soporta Shorts, Live, etc.)
-        const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-        const ytMatch = url.match(ytRegex);
-        if (ytMatch) {
-            return { 
-                tipo: 'youtube', 
-                id: ytMatch[1], 
-                thumb: `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg` 
+    obtenerInfoVideo(url, file = null) {
+        if (!url && !file) return { tipo: 'imagen', thumb: '', esArchivo: false };
+        if (file && file instanceof File) {
+            const esVideo = file.type.startsWith('video/');
+            const blobUrl = URL.createObjectURL(file);
+            return {
+                tipo: esVideo ? 'video' : 'imagen',
+                esArchivo: esVideo,
+                thumb: esVideo ? 'https://cdn-icons-png.flaticon.com/512/1179/1179120.png' : blobUrl,
+                url: blobUrl
             };
         }
-
-        // Detección de TikTok
-        if (url.includes('tiktok.com')) {
-            const ttId = url.split('/video/')[1]?.split('?')[0];
-            return { 
-                tipo: 'tiktok', 
-                id: ttId, 
-                thumb: 'https://cdn-icons-png.flaticon.com/512/3046/3046121.png' 
-            };
+        const urlStr = String(url);
+        if (urlStr.startsWith('blob:')) {
+            const itemEnGaleria = this._galeriaArchivos.find(i => i.url === urlStr);
+            if (itemEnGaleria && itemEnGaleria.tipo === 'video') {
+                return { tipo: 'video', esArchivo: true, thumb: 'https://cdn-icons-png.flaticon.com/512/1179/1179120.png', url: urlStr };
+            }
         }
+        const esArchivoDirecto = urlStr.match(/\.(mp4|webm|ogg|mov|m4v)($|\?)/i);
+        if (esArchivoDirecto) return { tipo: 'video', esArchivo: true, thumb: 'https://cdn-icons-png.flaticon.com/512/1179/1179120.png', url: urlStr };
 
-        // Detección de Redes Sociales (Meta)
-        if (url.includes('facebook.com') || url.includes('fb.watch')) {
-            return { tipo: 'facebook', thumb: 'https://cdn-icons-png.flaticon.com/512/124/124010.png' };
+        const ytMatch = urlStr.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+        if (ytMatch) return { tipo: 'youtube', id: ytMatch[1], thumb: `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`, url: urlStr };
+        if (urlStr.includes('facebook.com') || urlStr.includes('fb.watch')) return { tipo: 'facebook', thumb: 'https://cdn-icons-png.flaticon.com/512/124/124010.png', url: urlStr };
+        if (urlStr.includes('instagram.com')) return { tipo: 'instagram', thumb: 'https://cdn-icons-png.flaticon.com/512/174/174855.png', url: urlStr };
+        if (urlStr.includes('tiktok.com')) {
+            const tkId = urlStr.split('/video/')[1]?.split('?')[0];
+            return { tipo: 'tiktok', id: tkId, thumb: 'https://cdn-icons-png.flaticon.com/512/3046/3046121.png', url: urlStr };
         }
-        if (url.includes('instagram.com')) {
-            return { tipo: 'instagram', thumb: 'https://cdn-icons-png.flaticon.com/512/174/174855.png' };
-        }
-
-        // Archivos locales (.mp4, .webm, etc)
-        const esArchivo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.startsWith('blob:');
-        return { tipo: esArchivo ? 'local' : 'imagen', thumb: url, esArchivo: !!esArchivo };
+        return { tipo: 'imagen', thumb: urlStr, url: urlStr, esArchivo: false };
     },
 
-    // 2. Proporciones Dinámicas y Reproductor (Lógica Actualizada)
     renderVideoPlayer(url) {
+        if (!url) return `<div class="p-10 bg-slate-100 text-center rounded-2xl font-bold">URL no válida</div>`;
         const info = this.obtenerInfoVideo(url);
-        
-        if (info.esArchivo) {
-            return `<video src="${url}" controls class="w-full rounded-2xl shadow-2xl" autoplay></video>`;
+        const esLocal = url.startsWith('blob:');
+        if (info.esArchivo || esLocal) {
+            return `<video src="${url}" controls autoplay class="w-full rounded-2xl shadow-2xl bg-black" style="max-height: 500px;"></video>`;
         }
-
         let iframeSrc = '';
-        let aspectPadding = '56.25%'; // 16:9 Estándar (YouTube)
-
+        let aspect = '56.25%';
         switch (info.tipo) {
-            case 'youtube':
-                iframeSrc = `https://www.youtube.com/embed/${info.id}?autoplay=1`;
-                break;
-            case 'facebook':
-                iframeSrc = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`;
-                aspectPadding = '75%'; // 4:3 para Facebook
-                break;
-            case 'instagram':
-                // Limpia la URL y fuerza el /embed
-                const cleanIns = url.split('?')[0].replace(/\/$/, "") + '/embed';
-                iframeSrc = cleanIns;
-                aspectPadding = '125%'; // Formato retrato IG
-                break;
-            case 'tiktok':
-                if (info.id) iframeSrc = `https://www.tiktok.com/embed/v2/${info.id}`;
-                aspectPadding = '177%'; // 9:16 Vertical total (TikTok)
-                break;
+            case 'youtube': iframeSrc = `https://www.youtube.com/embed/${info.id}?autoplay=1&rel=0`; break;
+            case 'facebook': iframeSrc = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0&autoplay=1`; aspect = '75%'; break;
+            case 'instagram': iframeSrc = url.split('?')[0].replace(/\/$/, "") + '/embed'; aspect = '125%'; break;
+            case 'tiktok': if (info.id) { iframeSrc = `https://www.tiktok.com/embed/v2/${info.id}`; aspect = '177%'; } break;
         }
-
-        if (iframeSrc) {
-            return `
-                <div style="position: relative; width: 100%; padding-top: ${aspectPadding}; background: black; border-radius: 1.5rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                    <iframe src="${iframeSrc}" 
-                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
-                            frameborder="0" 
-                            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen" 
-                            allowfullscreen>
-                    </iframe>
-                </div>`;
-        }
-        
-        return `<div class="p-10 bg-slate-100 text-center rounded-2xl font-bold">No se pudo cargar la previsualización del video</div>`;
+        if (iframeSrc) return `<div style="position: relative; width: 100%; padding-top: ${aspect}; background: black; border-radius: 1.5rem; overflow: hidden;"><iframe src="${iframeSrc}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe></div>`;
+        return `<div class="p-10 bg-slate-100 text-center rounded-2xl font-bold">No se pudo cargar el reproductor</div>`;
     },
 
     verPreviewAmpliado(url, tipo = 'image') {
         if (!url) return;
         const info = this.obtenerInfoVideo(url);
-        // Si el tipo es video o el detector dice que es archivo de video
-        const content = (tipo === 'video' || info.esArchivo) ? this.renderVideoPlayer(url) : `<img src="${url}" class="w-full rounded-2xl shadow-2xl">`;
-        
-        Swal.fire({ 
-            html: content, 
-            showConfirmButton: false, 
-            background: 'transparent', 
-            width: (tipo === 'video' && (info.tipo === 'tiktok' || info.tipo === 'instagram')) ? '400px' : '850px', 
-            backdrop: 'rgba(15, 23, 42, 0.95)' 
-        });
+        const esVideo = (tipo === 'video' || info.tipo !== 'imagen' || (url.startsWith('blob:') && tipo === 'video'));
+        const content = esVideo ? this.renderVideoPlayer(url) : `<img src="${url}" class="w-full rounded-2xl shadow-2xl object-contain" style="max-height: 85vh;">`;
+        Swal.fire({ html: content, showConfirmButton: false, background: 'transparent', width: (info.tipo === 'tiktok' || info.tipo === 'instagram') ? '400px' : '850px', backdrop: 'rgba(15, 23, 42, 0.95)', showCloseButton: true });
     },
 
     sync(el, campo, type = 'text') {
         this._datosTemporales[campo] = type === 'checkbox' ? el.checked : el.value;
-        if (campo === 'nombre') document.querySelector('.preview-nombre').innerText = el.value || 'Nombre del Producto';
-        if (campo === 'precio') document.querySelector('.preview-precio').innerText = el.value || '0.00';
-        if (campo === 'descripcion') document.querySelector('.preview-desc').innerText = el.value || 'Descripción...';
-        if (campo === 'stock') document.querySelector('.preview-stock').innerText = el.value || '0';
+        const selectors = { nombre: '.preview-nombre', precio: '.preview-precio', descripcion: '.preview-desc', stock: '.preview-stock' };
+        if (selectors[campo]) {
+            const target = document.querySelector(selectors[campo]);
+            if (target) target.innerText = el.value || (campo === 'precio' ? '0.00' : campo === 'nombre' ? 'Nombre del Producto' : '...');
+        }
         if (campo === 'price_visible') document.querySelector('.preview-price-box').style.opacity = el.checked ? '1' : '0';
         if (campo === 'ws_active') document.querySelector('.preview-ws-btn').style.display = el.checked ? 'flex' : 'none';
     },
 
     async cambiarPortada(metodo) {
-        if (metodo === 'local') {
-            const { value: file } = await Swal.fire({ 
-                title: 'Cargar Imagen Local', input: 'file', inputAttributes: { 'accept': 'image/*' },
-                customClass: { confirmButton: 'bg-blue-600' }
-            });
-            if (file) {
-                this._portadaArchivo = { tipo: 'local', data: file, url: URL.createObjectURL(file) };
+        if (metodo === 'camera') {
+            const capturado = await this._cameraEngine.abrir('foto');
+            if (capturado) {
+                this._portadaArchivo = { tipo: 'imagen', data: capturado.archivo, url: capturado.url };
                 this.updateUI();
             }
+            return;
+        }
+        
+        if (metodo === 'local') {
+            const { value: file } = await Swal.fire({ title: 'Cargar Imagen Local', input: 'file', inputAttributes: { 'accept': 'image/*' } });
+            if (file) { this._portadaArchivo = { tipo: 'imagen', data: file, url: URL.createObjectURL(file) }; this.updateUI(); }
         } else {
             const { value: url } = await Swal.fire({ title: 'Vincular URL de Imagen', input: 'url' });
-            if (url) {
-                this._portadaArchivo = { tipo: 'url', data: null, url: url };
-                this.updateUI();
-            }
+            if (url) { this._portadaArchivo = { tipo: 'imagen', data: null, url: url }; this.updateUI(); }
+        }
+    },
+
+    async addGaleriaManual() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Configurar Multimedia',
+            width: '600px',
+            html: `
+            <div class="grid grid-cols-2 gap-6 p-4 text-left">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 block mb-2 px-1">Formato</label>
+                    <select id="swal-tipo" class="w-full bg-slate-100 border-none rounded-xl p-4 font-bold outline-none">
+                        <option value="imagen">Imagen</option>
+                        <option value="video">Video</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 block mb-2 px-1">Carga</label>
+                    <select id="swal-metodo" class="w-full bg-slate-100 border-none rounded-xl p-4 font-bold outline-none">
+                        <option value="url">URL / Enlace</option>
+                        <option value="local">Archivo Local</option>
+                        <option value="camera">Cámara Nexus</option>
+                    </select>
+                </div>
+            </div>`,
+            confirmButtonText: 'Siguiente',
+            preConfirm: () => [document.getElementById('swal-tipo').value, document.getElementById('swal-metodo').value]
+        });
+
+        if (!formValues) return;
+        const [tipoManual, metodo] = formValues;
+        let url = '', file = null, nombre = '';
+
+        if (metodo === 'camera') {
+            const res = await this._cameraEngine.abrir(tipoManual);
+            if (res) { url = res.url; file = res.archivo; nombre = res.nombre; }
+        } else if (metodo === 'local') {
+            const acceptAttr = tipoManual === 'video' ? 'video/*' : 'image/*';
+            const { value: f } = await Swal.fire({ title: 'Subir Archivo', input: 'file', inputAttributes: { 'accept': acceptAttr } });
+            if (f) { file = f; url = URL.createObjectURL(f); nombre = f.name; }
+        } else {
+            const { value: u } = await Swal.fire({ title: 'Pegar URL', input: 'url' });
+            if (u) { url = u; nombre = tipoManual.toUpperCase(); }
+        }
+
+        if (url) {
+            this._galeriaArchivos.push({
+                id: Date.now().toString() + Math.random(),
+                tipo: tipoManual,
+                url: url,
+                file: file,
+                thumb: tipoManual === 'video' ? 'https://cdn-icons-png.flaticon.com/512/1179/1179120.png' : url,
+                nombre: nombre,
+                orden: this._galeriaArchivos.length + 1
+            });
+            this._galeriaArchivos.sort((a, b) => a.orden - b.orden);
+            this.updateUI();
         }
     },
 
@@ -197,62 +365,10 @@ export const productManager = {
     },
 
     toggleHija(id) {
-        this._categoriasSeleccionadas = this._categoriasSeleccionadas.includes(id) ? this._categoriasSeleccionadas.filter(i => i !== id) : [...this._categoriasSeleccionadas, id];
+        this._categoriasSeleccionadas = this._categoriasSeleccionadas.includes(id) 
+            ? this._categoriasSeleccionadas.filter(i => i !== id) 
+            : [...this._categoriasSeleccionadas, id];
         this.updateUI();
-    },
-
-    async addGaleriaManual() {
-        const { value: formValues } = await Swal.fire({
-            title: 'Configurar Multimedia',
-            width: '600px',
-            html: `
-                <div class="grid grid-cols-2 gap-6 p-4 text-left">
-                    <div>
-                        <label class="text-[10px] font-black uppercase text-slate-400 block mb-2 px-1">Formato</label>
-                        <select id="swal-tipo" class="w-full bg-slate-100 border-none rounded-xl p-4 font-bold outline-none">
-                            <option value="imagen">Imagen</option>
-                            <option value="video">Video</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-black uppercase text-slate-400 block mb-2 px-1">Carga</label>
-                        <select id="swal-metodo" class="w-full bg-slate-100 border-none rounded-xl p-4 font-bold outline-none">
-                            <option value="url">URL / Enlace</option>
-                            <option value="local">Archivo</option>
-                        </select>
-                    </div>
-                </div>`,
-            confirmButtonText: 'Siguiente',
-            preConfirm: () => [document.getElementById('swal-tipo').value, document.getElementById('swal-metodo').value]
-        });
-
-        if (!formValues) return;
-        const [tipo, metodo] = formValues;
-        let url = ''; let file = null;
-
-        if (metodo === 'local') {
-            const acceptAttr = tipo === 'video' ? 'video/*' : 'image/*';
-            const { value: f } = await Swal.fire({ title: 'Subir Archivo', input: 'file', inputAttributes: { 'accept': acceptAttr } });
-            if (f) { file = f; url = URL.createObjectURL(f); }
-        } else {
-            const { value: u } = await Swal.fire({ title: 'Pegar URL', input: 'url' });
-            if (u) url = u;
-        }
-
-        if (url) {
-            const info = this.obtenerInfoVideo(url);
-            this._galeriaArchivos.push({
-                id: Date.now().toString() + Math.random(),
-                tipo: info.esArchivo || tipo === 'video' ? 'video' : 'imagen', 
-                url, 
-                file, 
-                thumb: (info.esArchivo || tipo === 'video') ? info.thumb : url,
-                nombre: metodo === 'url' ? (info.tipo !== 'local' && info.tipo !== 'imagen' ? info.tipo.toUpperCase() : 'URL Externo') : file.name,
-                orden: this._galeriaArchivos.length + 1
-            });
-            this._galeriaArchivos.sort((a, b) => a.orden - b.orden);
-            this.updateUI();
-        }
     },
 
     setOrdenGaleria(id, valor) {
@@ -274,38 +390,27 @@ export const productManager = {
             [data-nexus-tooltip]::before {
                 content: attr(data-nexus-tooltip);
                 position: absolute;
-                bottom: 125%;
-                left: 50%;
+                bottom: 125%; left: 50%;
                 transform: translateX(-50%) translateY(10px);
-                background: #0f172a;
-                color: white;
-                padding: 8px 14px;
-                border-radius: 10px;
-                font-size: 10px;
-                font-weight: 900;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                white-space: nowrap;
-                opacity: 0;
-                visibility: hidden;
+                background: #0f172a; color: white;
+                padding: 8px 14px; border-radius: 10px;
+                font-size: 10px; font-weight: 900;
+                text-transform: uppercase; letter-spacing: 1px;
+                white-space: nowrap; opacity: 0; visibility: hidden;
                 transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                z-index: 9999;
-                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+                z-index: 9999; box-shadow: 0 10px 20px rgba(0,0,0,0.2);
             }
             [data-nexus-tooltip]:hover::before { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
             [data-nexus-tooltip]::after {
-                content: '';
-                position: absolute;
-                bottom: 110%;
-                left: 50%;
-                transform: translateX(-50%);
-                border: 6px solid transparent;
-                border-top-color: #0f172a;
-                opacity: 0;
-                visibility: hidden;
-                transition: all 0.3s ease;
+                content: ''; position: absolute;
+                bottom: 110%; left: 50%; transform: translateX(-50%);
+                border: 6px solid transparent; border-top-color: #0f172a;
+                opacity: 0; visibility: hidden; transition: all 0.3s ease;
             }
             [data-nexus-tooltip]:hover::after { opacity: 1; visibility: visible; }
+            .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+            .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         `;
         document.head.appendChild(style);
     },
@@ -372,7 +477,7 @@ export const productManager = {
                                     ${seleccionadas.map(s => `
                                         <div class="flex justify-between items-center p-4 bg-white rounded-xl mb-2 shadow-sm border border-blue-100">
                                             <span class="text-[11px] font-black text-slate-700 uppercase">${s.nombre}</span>
-                                            <button data-nexus-tooltip="Remover" onclick="window.productManager.toggleHija(${s.id})" class="text-red-400"><span class="material-symbols-outlined text-base">cancel</span></button>
+                                            <button onclick="window.productManager.toggleHija(${s.id})" class="text-red-400"><span class="material-symbols-outlined text-base">cancel</span></button>
                                         </div>`).join('')}
                                 </div>
                             </div>
@@ -380,25 +485,14 @@ export const productManager = {
 
                         <div class="${this._pasoActual === 3 ? 'block' : 'hidden'} space-y-8">
                             <div class="relative group aspect-video bg-slate-50 rounded-[2.5rem] overflow-hidden border-2 border-dashed border-slate-200 flex items-center justify-center transition-all hover:border-blue-400">
-                                ${this._portadaArchivo.url ? `
-                                    <img src="${this._portadaArchivo.url}" 
-                                         class="w-full h-full object-cover cursor-pointer"
-                                         onclick="window.productManager.verPreviewAmpliado('${this._portadaArchivo.url}', 'image')">
-                                ` : '<span class="material-symbols-outlined text-6xl text-slate-200">add_photo_alternate</span>'}
-                                
+                                ${this._portadaArchivo.url ? `<img src="${this._portadaArchivo.url}" class="w-full h-full object-cover cursor-pointer" onclick="window.productManager.verPreviewAmpliado('${this._portadaArchivo.url}', 'imagen')">` : '<span class="material-symbols-outlined text-6xl text-slate-200">add_photo_alternate</span>'}
                                 <div class="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-6">
-                                    ${this._portadaArchivo.url ? `
-                                        <button data-nexus-tooltip="Ver Portada" 
-                                                onclick="window.productManager.verPreviewAmpliado('${this._portadaArchivo.url}', 'image')" 
-                                                class="p-4 bg-white rounded-full text-slate-900 hover:text-blue-600 transition-all">
-                                            <span class="material-symbols-outlined">visibility</span>
-                                        </button>
-                                    ` : ''}
-                                    <button data-nexus-tooltip="Subir Archivo" onclick="window.productManager.cambiarPortada('local')" class="p-4 bg-white rounded-full text-slate-900 hover:text-blue-600 transition-all"><span class="material-symbols-outlined">upload_file</span></button>
-                                    <button data-nexus-tooltip="Pegar Link" onclick="window.productManager.cambiarPortada('url')" class="p-4 bg-white rounded-full text-slate-900 hover:text-blue-600 transition-all"><span class="material-symbols-outlined">link</span></button>
+                                    ${this._portadaArchivo.url ? `<button onclick="window.productManager.verPreviewAmpliado('${this._portadaArchivo.url}', 'imagen')" class="p-4 bg-white rounded-full text-slate-900 hover:text-blue-600 transition-all"><span class="material-symbols-outlined">visibility</span></button>` : ''}
+                                    <button onclick="window.productManager.cambiarPortada('local')" data-nexus-tooltip="Subir Archivo" class="p-4 bg-white rounded-full text-slate-900 hover:text-blue-600 transition-all"><span class="material-symbols-outlined">upload_file</span></button>
+                                    <button onclick="window.productManager.cambiarPortada('camera')" data-nexus-tooltip="Usar Cámara" class="p-4 bg-white rounded-full text-slate-900 hover:text-blue-600 transition-all"><span class="material-symbols-outlined">photo_camera</span></button>
+                                    <button onclick="window.productManager.cambiarPortada('url')" data-nexus-tooltip="Pegar Link" class="p-4 bg-white rounded-full text-slate-900 hover:text-blue-600 transition-all"><span class="material-symbols-outlined">link</span></button>
                                 </div>
                             </div>
-                            
                             <div class="flex justify-between items-center px-2">
                                 <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Galería (Imágenes y Videos)</h3>
                                 <button onclick="window.productManager.addGaleriaManual()" class="bg-slate-900 text-white px-8 py-3 rounded-full font-black text-[10px] uppercase shadow-lg hover:bg-blue-600 transition-all">Añadir Nuevo</button>
@@ -452,15 +546,12 @@ export const productManager = {
 
     _renderGaleriaList() {
         if (this._galeriaArchivos.length === 0) return `<div class="p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-bold text-[10px] uppercase tracking-widest">Sin multimedia adicional</div>`;
-        
+
         return this._galeriaArchivos.map(item => `
             <div class="group flex items-center gap-5 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:border-blue-200 transition-all">
                 <div class="flex flex-col items-center bg-slate-50 p-2 rounded-xl">
                     <span class="text-[7px] font-black text-slate-400 uppercase mb-1">ORDEN</span>
-                    <input type="number" 
-                           value="${item.orden}" 
-                           onchange="window.productManager.setOrdenGaleria('${item.id}', this.value)" 
-                           class="w-10 text-center bg-transparent font-black text-blue-600 text-sm outline-none border-none p-0">
+                    <input type="number" value="${item.orden}" onchange="window.productManager.setOrdenGaleria('${item.id}', this.value)" class="w-10 text-center bg-transparent font-black text-blue-600 text-sm outline-none border-none p-0">
                 </div>
                 <div data-nexus-tooltip="Previsualizar" class="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden relative cursor-pointer" onclick="window.productManager.verPreviewAmpliado('${item.url}', '${item.tipo}')">
                     ${item.tipo === 'video' ? `<img src="${item.thumb}" class="w-full h-full object-cover opacity-60"><div class="absolute inset-0 flex items-center justify-center"><span class="material-symbols-outlined text-white text-xl">play_circle</span></div>` : `<img src="${item.url}" class="w-full h-full object-cover">`}
@@ -471,7 +562,7 @@ export const productManager = {
                         <span class="px-2 py-0.5 bg-slate-100 rounded text-[8px] font-black text-slate-400 uppercase">${item.tipo}</span>
                     </div>
                 </div>
-                <button data-nexus-tooltip="Eliminar" onclick="window.productManager._galeriaArchivos = window.productManager._galeriaArchivos.filter(i => i.id !== '${item.id}'); window.productManager.updateUI()" class="p-3 text-slate-300 hover:text-red-500 transition-all">
+                <button onclick="window.productManager._galeriaArchivos = window.productManager._galeriaArchivos.filter(i => i.id !== '${item.id}'); window.productManager.updateUI()" class="p-3 text-slate-300 hover:text-red-500 transition-all">
                     <span class="material-symbols-outlined">delete</span>
                 </button>
             </div>`).join('');
@@ -479,36 +570,24 @@ export const productManager = {
 
     navSiguiente() {
         if (this._pasoActual === 3) {
-            console.log("--- INICIANDO ENVÍO FINAL ---");
+            const galeriaLimpia = this._galeriaArchivos.map(i => ({
+                file: i.file,
+                url: i.url,
+                tipo: i.tipo,
+                orden: parseInt(i.orden) || 0,
+                nombre: i.nombre
+            }));
 
-            // 1. LIMPIEZA DE GALERÍA: Evita el error de "Doble JSON"
-            // Enviamos datos planos. El backend decidirá si usar 'file' o 'url'.
-            const galeriaLimpia = this._galeriaArchivos.map(i => {
-                console.log(`[DEBUG] Procesando item galería (${i.tipo}):`, i.nombre);
-                return { 
-                    file: i.file,                // Objeto File si es carga local
-                    url: i.file ? null : i.url,  // String URL si es link externo (YT, TikTok, etc)
-                    tipo: i.tipo, 
-                    orden: parseInt(i.orden) || 0,
-                    nombre: i.nombre
-                };
-            });
-
-            // 2. CONSTRUCCIÓN DEL OBJETO FINAL
-            const dataFinal = { 
-                ...this._datosTemporales, 
-                // Forzamos conversión a 1/0 por si la DB no reconoce booleanos JS
-                ws_active: this._datosTemporales.ws_active ? 1 : 0, 
+            const dataFinal = {
+                ...this._datosTemporales,
+                ws_active: this._datosTemporales.ws_active ? 1 : 0,
                 price_visible: this._datosTemporales.price_visible ? 1 : 0,
                 precio: parseFloat(this._datosTemporales.precio) || 0,
                 stock: parseInt(this._datosTemporales.stock) || 0,
-                categoriasIds: this._categoriasSeleccionadas, 
-                portada: this._portadaArchivo.data || this._portadaArchivo.url, 
+                categoriasIds: this._categoriasSeleccionadas,
+                portada: this._portadaArchivo.data || this._portadaArchivo.url,
                 galeria: galeriaLimpia
             };
-
-            console.log("[ENVÍO] Objeto final consolidado:", dataFinal);
-            console.log("------------------------------");
 
             this._mainContainer.innerHTML = this._originalContent;
             this._resolve(dataFinal);

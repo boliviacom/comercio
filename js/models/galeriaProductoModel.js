@@ -1,15 +1,13 @@
 import { supabase } from '../config/supabaseClient.js';
 
 /**
- * Modelo para la gestión de galería de productos (CRUD con Soft Delete)
- * Nexus Admin Suite - Model Layer - Actualizado para Supabase Client
+ * Modelo para la gestión de galería de productos
+ * Nexus Admin Suite - Model Layer
  */
 export const galeriaProductoModel = {
-    
+
     /**
-     * 1. VER (READ)
-     * Obtiene los recursos visibles de un producto específico.
-     * Filtra automáticamente por la columna 'visible'.
+     * Obtiene los elementos multimedia activos de un producto
      */
     async getByProducto(idProducto) {
         try {
@@ -29,22 +27,49 @@ export const galeriaProductoModel = {
     },
 
     /**
-     * 2. AÑADIR (CREATE)
-     * Inserta un nuevo recurso (imagen/video) a la galería.
+     * MÉTODO PRIVADO: Normalización de datos
+     * Evita que se guarden objetos JSON en columnas de texto.
+     */
+    _normalizarItem(item) {
+        let urlFinal = '';
+        let tipoFinal = 'imagen';
+
+        // Si el item es directamente un string (la URL)
+        if (typeof item === 'string') {
+            urlFinal = item;
+        }
+        // Si es el objeto que viene del Controller o del View
+        else if (item && typeof item === 'object') {
+            // Prioridad 1: Buscar la URL en las propiedades comunes
+            urlFinal = item.url || item.file_url || '';
+            tipoFinal = item.tipo || 'imagen';
+        }
+
+        // Limpieza final: Asegurar que sea string y no contenga rastro de objetos
+        return {
+            url: String(urlFinal).trim(),
+            tipo: String(tipoFinal).toLowerCase().includes('video') ? 'video' : 'imagen'
+        };
+    },
+
+    /**
+     * Inserta un solo elemento multimedia
      */
     async create(data) {
         try {
+            const cleaned = this._normalizarItem(data);
+
             const { data: result, error } = await supabase
                 .from('galeria_producto')
                 .insert([{
                     id_producto: data.idProducto,
-                    url: data.url,
-                    tipo: data.tipo || 'imagen',
-                    orden: data.orden || 0,
+                    url: cleaned.url,
+                    tipo: cleaned.tipo,
+                    orden: parseInt(data.orden) || 0,
                     visible: true
                 }])
                 .select();
-            
+
             if (error) throw error;
             return result[0];
         } catch (error) {
@@ -54,43 +79,48 @@ export const galeriaProductoModel = {
     },
 
     /**
-     * NUEVO: AÑADIR EN LOTE (BULK INSERT)
-     * Inserta múltiples imágenes a la vez. Ideal para la creación masiva del Controller.
+     * Inserta elementos en lote (Bulk Insert)
+     * Corregido para mapear correctamente las columnas de la DB.
      */
-    async createLote(idProducto, urls) {
+    async createLote(idProducto, itemsMultimedia) {
         try {
-            const payload = urls.map((url, index) => ({
+            // Mapeamos los items asegurándonos de que 'url' sea solo el string
+            const payload = itemsMultimedia.map(item => ({
                 id_producto: idProducto,
-                url: url,
-                tipo: 'imagen',
-                orden: index,
+                url: item.url,    // <--- Aquí debe llegar el string, no {url: '...'}
+                tipo: item.tipo,  // <--- Aquí 'imagen' o 'video'
+                orden: item.orden,
                 visible: true
             }));
 
             const { data, error } = await supabase
                 .from('galeria_producto')
-                .insert(payload)
-                .select();
+                .insert(payload);
 
             if (error) throw error;
             return { exito: true, data };
         } catch (error) {
-            console.error("Model Error [createLote]:", error.message);
-            return { exito: false, mensaje: error.message };
+            console.error("Error en GaleriaModel:", error.message);
+            throw error;
         }
     },
 
     /**
-     * 3. EDITAR (UPDATE)
-     * Actualiza datos de un recurso existente (cambio de URL, tipo u orden).
+     * Actualiza un elemento multimedia
      */
     async update(id, updates) {
         try {
+            const normalizado = this._normalizarItem(updates);
+            const cleanUpdates = { ...updates };
+
+            if (updates.url) cleanUpdates.url = normalizado.url;
+            if (updates.tipo) cleanUpdates.tipo = normalizado.tipo;
+
             const { error } = await supabase
                 .from('galeria_producto')
-                .update(updates)
+                .update(cleanUpdates)
                 .eq('id', id);
-            
+
             if (error) throw error;
             return true;
         } catch (error) {
@@ -100,8 +130,7 @@ export const galeriaProductoModel = {
     },
 
     /**
-     * 4. ELIMINAR (SOFT DELETE)
-     * No borra el registro de la DB, solo lo oculta de la vista del usuario.
+     * Borrado lógico (Soft Delete)
      */
     async delete(id) {
         try {
@@ -109,7 +138,7 @@ export const galeriaProductoModel = {
                 .from('galeria_producto')
                 .update({ visible: false })
                 .eq('id', id);
-            
+
             if (error) throw error;
             return true;
         } catch (error) {
@@ -119,21 +148,19 @@ export const galeriaProductoModel = {
     },
 
     /**
-     * EXTRA: REORDENAR (Bulk Update)
-     * Util para cuando arrastras imágenes y quieres guardar el nuevo orden de todas.
+     * Borrado físico (Limpieza antes de re-insertar en Edición)
      */
-    async updateOrden(listaOrdenada) {
-        // listaOrdenada: [{id: 1, orden: 0}, {id: 2, orden: 1}, ...]
+    async limpiarGaleria(idProducto) {
         try {
-            // En Supabase, para actualizar múltiples filas con diferentes valores 
-            // de forma eficiente, solemos disparar las promesas en paralelo.
-            const promesas = listaOrdenada.map(item => 
-                this.update(item.id, { orden: item.orden })
-            );
-            await Promise.all(promesas);
+            const { error } = await supabase
+                .from('galeria_producto')
+                .delete()
+                .eq('id_producto', idProducto);
+
+            if (error) throw error;
             return true;
         } catch (error) {
-            console.error("Model Error [updateOrden]:", error.message);
+            console.error("Model Error [limpiarGaleria]:", error.message);
             return false;
         }
     }
