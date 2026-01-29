@@ -1,6 +1,7 @@
 /**
  * Nexus Admin Suite V6.8 - Multimedia & Preview Optimization
  * Actualización: Cámara Pro con Temporizador y Límite de 1:50
+ * Nota: Compresión de video eliminada para envío directo.
  */
 export const productManager = {
     _galeriaArchivos: [],
@@ -15,15 +16,12 @@ export const productManager = {
 
     // --- MOTOR DE CÁMARA INTEGRADO ---
     _cameraEngine: {
-        _ffmpeg: null,
+        _ffmpeg: null, // Mantenido por estructura, pero ya no se usa para compresión
         _stream: null,
         _timerInterval: null,
         async init() {
-            if (this._ffmpeg) return;
-            try {
-                this._ffmpeg = FFmpeg.createFFmpeg({ log: false });
-                await this._ffmpeg.load();
-            } catch (e) { console.error("FFmpeg Load Error:", e); }
+            // No se carga FFmpeg para ahorrar recursos
+            return;
         },
         async abrir(modo = 'video') {
             return new Promise(async (resolve) => {
@@ -61,7 +59,7 @@ export const productManager = {
                     title: esVideo ? 'NEXUS VIDEO RECORDER' : 'NEXUS PHOTO STUDIO',
                     html: modalHtml,
                     showConfirmButton: false,
-                    width: '900px', // Modal expandido
+                    width: '900px',
                     background: '#f8fafc',
                     padding: '0',
                     didOpen: async () => {
@@ -99,7 +97,7 @@ export const productManager = {
                         } else {
                             let chunks = [];
                             let seconds = 0;
-                            const limit = 110; // 1:50 en segundos
+                            const limit = 110;
 
                             btnRec.onclick = () => {
                                 const recorder = new MediaRecorder(this._stream);
@@ -143,22 +141,20 @@ export const productManager = {
             });
         },
         async procesar(blob, tipo) {
-            const nombre = `nexus_${Date.now()}.${tipo === 'video' ? 'mp4' : 'jpg'}`;
-            let fileFinal = blob;
-
-            if (tipo === 'video') {
-                Swal.showLoading();
-                await this.init();
-                if (this._ffmpeg) {
-                    this._ffmpeg.FS('writeFile', 'in.webm', await FFmpeg.fetchFile(blob));
-                    await this._ffmpeg.run('-i', 'in.webm', '-vcodec', 'libx264', '-crf', '28', '-preset', 'ultrafast', 'out.mp4');
-                    const data = this._ffmpeg.FS('readFile', 'out.mp4');
-                    fileFinal = new File([data.buffer], nombre, { type: 'video/mp4' });
-                }
-            } else {
-                fileFinal = new File([blob], nombre, { type: 'image/jpeg' });
-            }
-            return { archivo: fileFinal, url: URL.createObjectURL(fileFinal), tipo, nombre };
+            // Se elimina la lógica de FFmpeg y compresión.
+            // Se genera el archivo directamente desde el blob capturado.
+            const extension = tipo === 'video' ? 'webm' : 'jpg';
+            const mime = tipo === 'video' ? 'video/webm' : 'image/jpeg';
+            const nombre = `nexus_${Date.now()}.${extension}`;
+            
+            const fileFinal = new File([blob], nombre, { type: mime });
+            
+            return { 
+                archivo: fileFinal, 
+                url: URL.createObjectURL(fileFinal), 
+                tipo, 
+                nombre 
+            };
         }
     },
 
@@ -371,14 +367,28 @@ export const productManager = {
         this.updateUI();
     },
 
-    setOrdenGaleria(id, valor) {
-        const nuevoOrden = parseInt(valor) || 0;
-        const item = this._galeriaArchivos.find(i => i.id === id);
-        if (item) {
-            item.orden = nuevoOrden;
-            this._galeriaArchivos.sort((a, b) => a.orden - b.orden);
-            this.updateUI();
+    setOrdenGaleria(id, nuevoValor) {
+        const nuevoOrden = parseInt(nuevoValor) || 0;
+        const itemCambiado = this._galeriaArchivos.find(i => i.id === id);
+        
+        if (!itemCambiado) return;
+
+        const ordenAnterior = itemCambiado.orden;
+
+        // 1. Buscamos si otro elemento ya tenía ese número de orden
+        const itemEnDestino = this._galeriaArchivos.find(i => i.id !== id && i.orden === nuevoOrden);
+
+        if (itemEnDestino) {
+            // 2. Si existe, intercambiamos: el que estaba en el destino pasa a la posición vieja
+            itemEnDestino.orden = ordenAnterior;
         }
+
+        // 3. Asignamos el nuevo orden al elemento actual
+        itemCambiado.orden = nuevoOrden;
+
+        // 4. Re-ordenamos el array y refrescamos la interfaz
+        this._galeriaArchivos.sort((a, b) => a.orden - b.orden);
+        this.updateUI();
     },
 
     injectStyles() {
@@ -569,7 +579,44 @@ export const productManager = {
     },
 
     navSiguiente() {
+        const d = this._datosTemporales;
+
+        // --- VALIDACIÓN PASO 1: Información Detallada ---
+        if (this._pasoActual === 1) {
+            if (!d.nombre.trim()) {
+                this._alertError('El nombre del producto es obligatorio');
+                return;
+            }
+            if (!d.precio || parseFloat(d.precio) <= 0) {
+                this._alertError('Debes ingresar un precio válido mayor a 0');
+                return;
+            }
+            if (!d.descripcion.trim()) {
+                this._alertError('La descripción es necesaria para informar a tus clientes');
+                return;
+            }
+        }
+
+        // --- VALIDACIÓN PASO 2: Categorización ---
+        if (this._pasoActual === 2) {
+            if (this._categoriasSeleccionadas.length === 0) {
+                this._alertError('Selecciona al menos una subcategoría para organizar tu producto');
+                return;
+            }
+        }
+
+        // --- VALIDACIÓN PASO 3: Multimedia Obligatoria ---
         if (this._pasoActual === 3) {
+            if (!this._portadaArchivo.url) {
+                this._alertError('Falta la imagen de portada. Es lo primero que verán tus clientes');
+                return;
+            }
+            if (this._galeriaArchivos.length === 0) {
+                this._alertError('La galería no puede estar vacía. Agrega al menos una imagen o video adicional');
+                return;
+            }
+
+            // --- PROCESO DE GUARDADO FINAL ---
             const galeriaLimpia = this._galeriaArchivos.map(i => ({
                 file: i.file,
                 url: i.url,
@@ -589,12 +636,35 @@ export const productManager = {
                 galeria: galeriaLimpia
             };
 
+            Swal.fire({
+                title: '¡Excelente!',
+                text: 'Producto configurado correctamente',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+
             this._mainContainer.innerHTML = this._originalContent;
             this._resolve(dataFinal);
         } else {
             this._pasoActual++;
             this.updateUI();
         }
+    },
+
+    // Función auxiliar para alertas rápidas y limpias
+    _alertError(mensaje) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: mensaje,
+            showConfirmButton: false,
+            timer: 3500,
+            timerProgressBar: true,
+            background: '#fff1f2',
+            color: '#be123c'
+        });
     },
 };
 

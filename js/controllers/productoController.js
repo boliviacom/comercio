@@ -41,45 +41,30 @@ export const productoController = {
     },
 
     /**
-     * PROCESAMIENTO MULTIMEDIA CORREGIDO
-     * Extrae strings limpios y detecta tipos correctamente.
-     */
-    // productoController.js
-
+ * PROCESAMIENTO MULTIMEDIA INTELIGENTE
+ * Decide si subir a Supabase o mantener la URL actual.
+ */
     async _procesarGaleria(galeriaRaw, nombreProducto) {
         if (!galeriaRaw || !Array.isArray(galeriaRaw)) return [];
 
-        const promesasMultimedia = galeriaRaw.map(async (item, index) => {
-            let urlFinal = item.url;
-            let tipoFinal = item.tipo; // Tomamos el tipo inicial detectado por el modal
-
-            // 1. Caso: El item tiene un archivo físico (File)
+        const promesas = galeriaRaw.map(async (item, index) => {
+            // 1. Si es un archivo nuevo (File) -> SUBIR
             if (item.file instanceof File) {
-                urlFinal = await this._uploadToSupabase(item.file, 'galeria', nombreProducto);
-                // Re-confirmamos tipo basado en el archivo real subido
-                tipoFinal = item.file.type.startsWith('video') ? 'video' : 'imagen';
-            }
-            // 2. Caso: Es un link de red social o URL externa
-            else if (typeof urlFinal === 'string') {
-                const info = productManager.obtenerInfoVideo(urlFinal);
-                // Si el detector dice que es video (YT, TikTok, etc), marcamos como video
-                if (info.tipo !== 'imagen' && info.tipo !== 'desconocido') {
-                    tipoFinal = 'video';
-                } else {
-                    tipoFinal = 'imagen';
-                }
+                const url = await this._uploadToSupabase(item.file, 'galeria', nombreProducto);
+                const tipo = item.file.type.startsWith('video') ? 'video' : 'imagen';
+                return { url, tipo, orden: item.orden ?? index };
             }
 
-            return {
-                url: urlFinal,
-                tipo: tipoFinal,
-                orden: item.orden !== undefined ? parseInt(item.orden) : index
-            };
+            // 2. Si ya es una URL existente (de Supabase o Externa) -> MANTENER
+            if (typeof item.url === 'string' && item.url.startsWith('http')) {
+                return { url: item.url, tipo: item.tipo, orden: item.orden ?? index };
+            }
+
+            return null;
         });
 
-        const resultados = await Promise.all(promesasMultimedia);
-        // Retornamos solo los que tienen URL válida
-        return resultados.filter(res => res.url && res.url !== '');
+        const resultados = await Promise.all(promesas);
+        return resultados.filter(res => res !== null);
     },
 
     async inicializar() {
@@ -179,8 +164,8 @@ export const productoController = {
     },
 
     /**
-     * EDICIÓN DE PRODUCTO
-     */
+ * EDICIÓN DE PRODUCTO COMPLETA
+ */
     async mostrarFormularioEditar(id) {
         try {
             const [producto, categorias, categoriasVinculadas, galeriaActual] = await Promise.all([
@@ -190,61 +175,59 @@ export const productoController = {
                 galeriaProductoModel.getByProducto(id)
             ]);
 
-            if (!producto) throw new Error('No se pudo obtener el producto.');
+            if (!producto) throw new Error('Producto no encontrado');
 
+            // Mapeamos para que el modal reconozca los datos
             const productoParaEdicion = {
-                ...producto,
-                portada: producto.imagen_url,
-                categoriasIds: categoriasVinculadas,
-                galeria: galeriaActual
-            };
+                id: producto.id,
+                // Verifica si en tu DB es 'nombre' o 'name'
+                nombre: producto.nombre || producto.name || '',
+                precio: producto.precio || 0,
+                stock: producto.stock || 0,
+                descripcion: producto.descripcion || '',
 
+                // Si en Supabase los campos booleanos se llaman distinto, cámbialos aquí:
+                ws_active: producto.ws_active ?? true,
+                price_visible: producto.price_visible ?? true,
+
+                // Portada y Galería
+                portada: producto.imagen_url || producto.portada,
+                categoriasIds: categoriasVinculadas || [],
+                galeria: galeriaActual || []
+            };
             const datosEditados = await productManager.start('content-area', categorias, productoParaEdicion);
 
             if (datosEditados) {
                 productoView.mostrarCargando?.('Actualizando producto...');
 
-                // 1. Procesar Portada
-                let portadaUrl = producto.imagen_url;
+                // Manejo de Portada: ¿Es nueva o vieja?
+                let portadaFinal = producto.imagen_url;
                 if (datosEditados.portada instanceof File) {
-                    portadaUrl = await this._uploadToSupabase(datosEditados.portada, 'portadas', datosEditados.nombre);
-                } else if (typeof datosEditados.portada === 'string') {
-                    portadaUrl = datosEditados.portada;
+                    portadaFinal = await this._uploadToSupabase(datosEditados.portada, 'portadas', datosEditados.nombre);
                 }
 
-                // 2. Actualizar Producto Base
-                const resultado = await productoModel.actualizar(id, {
-                    ...datosEditados,
-                    portada: portadaUrl
-                });
+                // Actualización base
+                const res = await productoModel.actualizar(id, { ...datosEditados, portada: portadaFinal });
 
-                if (resultado.exito) {
-                    // 3. Galería: Procesar y Limpiar
-                    const itemsMultimedia = await this._procesarGaleria(datosEditados.galeria, datosEditados.nombre);
+                if (res.exito) {
+                    // Procesar Galería (Nuevos + Viejos con nuevo orden)
+                    const nuevaGaleria = await this._procesarGaleria(datosEditados.galeria, datosEditados.nombre);
 
-                    // Importante: Primero limpiar, luego insertar (Secuencial para evitar conflictos)
+                    // Limpiamos galería vieja y guardamos la nueva configuración
                     await galeriaProductoModel.limpiarGaleria(id);
 
-                    const promesas = [];
-                    const listaCats = datosEditados.categoriasIds || [];
+                    await Promise.all([
+                        productoCategoriaModel.actualizarRelaciones(id, datosEditados.categoriasIds),
+                        galeriaProductoModel.createLote(id, nuevaGaleria)
+                    ]);
 
-                    if (listaCats.length > 0) {
-                        promesas.push(productoCategoriaModel.actualizarRelaciones(id, listaCats));
-                    }
-                    if (itemsMultimedia.length > 0) {
-                        promesas.push(galeriaProductoModel.createLote(id, itemsMultimedia));
-                    }
-
-                    await Promise.all(promesas);
                     await this.refrescarVista();
-                    productoView.notificarExito?.('Producto actualizado correctamente');
-                } else {
-                    throw new Error(resultado.mensaje);
+                    productoView.notificarExito?.('Producto actualizado');
                 }
             }
         } catch (error) {
             console.error(error);
-            productoView.notificarError?.('Error al intentar editar.');
+            productoView.notificarError?.('Error al editar el producto');
         }
     },
 
