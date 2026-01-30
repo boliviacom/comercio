@@ -48,23 +48,34 @@ export const productoController = {
         if (!galeriaRaw || !Array.isArray(galeriaRaw)) return [];
 
         const promesas = galeriaRaw.map(async (item, index) => {
-            // 1. Si es un archivo nuevo (File) -> SUBIR
+            // Aseguramos que el orden sea un número, si no viene, usamos el index del array
+            const ordenFinal = (item.orden !== undefined && item.orden !== "")
+                ? parseInt(item.orden)
+                : index;
+
+            // 1. Archivo Nuevo
             if (item.file instanceof File) {
                 const url = await this._uploadToSupabase(item.file, 'galeria', nombreProducto);
                 const tipo = item.file.type.startsWith('video') ? 'video' : 'imagen';
-                return { url, tipo, orden: item.orden ?? index };
+                return { url, tipo, orden: ordenFinal, nombre: item.nombre };
             }
 
-            // 2. Si ya es una URL existente (de Supabase o Externa) -> MANTENER
+            // 2. URL Existente (Mantenemos los datos actuales pero actualizamos el orden)
             if (typeof item.url === 'string' && item.url.startsWith('http')) {
-                return { url: item.url, tipo: item.tipo, orden: item.orden ?? index };
+                return {
+                    url: item.url,
+                    tipo: item.tipo || 'imagen',
+                    orden: ordenFinal,
+                    nombre: item.nombre || 'Archivo guardado'
+                };
             }
 
             return null;
         });
 
         const resultados = await Promise.all(promesas);
-        return resultados.filter(res => res !== null);
+        // Ordenamos el array antes de enviarlo a la base de datos
+        return resultados.filter(res => res !== null).sort((a, b) => a.orden - b.orden);
     },
 
     async inicializar() {
@@ -105,6 +116,34 @@ export const productoController = {
             } else { throw new Error(resultado.mensaje); }
         } catch (error) {
             productoView.notificarError?.(error.message || 'Error al cambiar el estado.');
+            this.refrescarVista();
+        }
+    },
+    /**
+ * Actualización masiva para productos filtrados
+ */
+    async toggleMasivoFiltrado(campo, nuevoEstado, ids) {
+        if (!ids || ids.length === 0) return;
+
+        productoView.mostrarCargando?.(`Actualizando ${ids.length} productos...`);
+        try {
+            // Ejecutamos todas las actualizaciones en paralelo para mayor velocidad
+            const promesas = ids.map(id =>
+                productoModel.actualizar(id, { [campo]: nuevoEstado })
+            );
+
+            const resultados = await Promise.all(promesas);
+            const errores = resultados.filter(r => !r.exito);
+
+            if (errores.length === 0) {
+                await this.refrescarVista();
+                productoView.notificarExito?.(`Se actualizaron ${ids.length} productos.`);
+            } else {
+                throw new Error(`Hubo problemas con ${errores.length} productos.`);
+            }
+        } catch (error) {
+            console.error("Error masivo:", error);
+            productoView.notificarError?.('No se pudo completar la actualización masiva.');
             this.refrescarVista();
         }
     },
@@ -164,8 +203,8 @@ export const productoController = {
     },
 
     /**
- * EDICIÓN DE PRODUCTO COMPLETA
- */
+      * EDICIÓN DE PRODUCTO COMPLETA
+      */
     async mostrarFormularioEditar(id) {
         try {
             const [producto, categorias, categoriasVinculadas, galeriaActual] = await Promise.all([
@@ -175,62 +214,83 @@ export const productoController = {
                 galeriaProductoModel.getByProducto(id)
             ]);
 
-            if (!producto) throw new Error('Producto no encontrado');
+            if (!producto) {
+                console.error("LOG ERROR: Producto no encontrado en DB");
+                throw new Error('Producto no encontrado');
+            }
 
-            // Mapeamos para que el modal reconozca los datos
             const productoParaEdicion = {
                 id: producto.id,
-                // Verifica si en tu DB es 'nombre' o 'name'
-                nombre: producto.nombre || producto.name || '',
+                nombre: producto.producto_nombre || producto.nombre || '',
                 precio: producto.precio || 0,
                 stock: producto.stock || 0,
                 descripcion: producto.descripcion || '',
-
-                // Si en Supabase los campos booleanos se llaman distinto, cámbialos aquí:
-                ws_active: producto.ws_active ?? true,
-                price_visible: producto.price_visible ?? true,
-
-                // Portada y Galería
-                portada: producto.imagen_url || producto.portada,
+                ws_active: producto.habilitar_whatsapp === true,
+                price_visible: producto.mostrar_precio === true,
+                portada: producto.imagen_url || '',
                 categoriasIds: categoriasVinculadas || [],
                 galeria: galeriaActual || []
             };
+
+            // Abrir modal y esperar datos editados
             const datosEditados = await productManager.start('content-area', categorias, productoParaEdicion);
+
 
             if (datosEditados) {
                 productoView.mostrarCargando?.('Actualizando producto...');
 
-                // Manejo de Portada: ¿Es nueva o vieja?
+                // --- 1. MANEJO DE PORTADA (CORREGIDO) ---
                 let portadaFinal = producto.imagen_url;
-                if (datosEditados.portada instanceof File) {
-                    portadaFinal = await this._uploadToSupabase(datosEditados.portada, 'portadas', datosEditados.nombre);
+
+                // Verificamos si la portada es un archivo nuevo (objeto con propiedad .data que es File)
+                // O si es directamente un File
+                const archivoPortada = datosEditados.portada?.data || datosEditados.portada;
+
+                if (archivoPortada instanceof File) {
+                    portadaFinal = await this._uploadToSupabase(archivoPortada, 'portadas', datosEditados.nombre);
+                } else if (typeof datosEditados.portada === 'string') {
+                    // Si es un string, es una URL vinculada
+                    portadaFinal = datosEditados.portada;
                 }
 
-                // Actualización base
-                const res = await productoModel.actualizar(id, { ...datosEditados, portada: portadaFinal });
+                // --- 2. PREPARAR PAYLOAD (CORREGIDO PARA EL MODELO) ---
+                const updatePayload = {
+                    nombre: datosEditados.nombre.trim(), // El modelo espera 'nombre'
+                    precio: parseFloat(datosEditados.precio),
+                    stock: parseInt(datosEditados.stock),
+                    descripcion: datosEditados.descripcion.trim(),
+                    ws_active: datosEditados.ws_active,
+                    price_visible: datosEditados.price_visible,
+                    portada: portadaFinal // El modelo mapeará esto a imagen_url
+                };
+
+                const res = await productoModel.actualizar(id, updatePayload);
 
                 if (res.exito) {
-                    // Procesar Galería (Nuevos + Viejos con nuevo orden)
+                    // 3. Procesar Galería
                     const nuevaGaleria = await this._procesarGaleria(datosEditados.galeria, datosEditados.nombre);
 
-                    // Limpiamos galería vieja y guardamos la nueva configuración
-                    await galeriaProductoModel.limpiarGaleria(id);
-
+                    // 4. Sincronización de relaciones
                     await Promise.all([
                         productoCategoriaModel.actualizarRelaciones(id, datosEditados.categoriasIds),
-                        galeriaProductoModel.createLote(id, nuevaGaleria)
+                        galeriaProductoModel.limpiarGaleria(id)
                     ]);
 
+                    // Guardar el nuevo lote de la galería
+                    if (nuevaGaleria.length > 0) {
+                        await galeriaProductoModel.createLote(id, nuevaGaleria);
+                    }
                     await this.refrescarVista();
-                    productoView.notificarExito?.('Producto actualizado');
+                    productoView.notificarExito?.('¡Producto actualizado con éxito!');
+                } else {
+                    throw new Error(res.mensaje || 'Error al actualizar tabla principal');
                 }
             }
         } catch (error) {
-            console.error(error);
-            productoView.notificarError?.('Error al editar el producto');
+            console.error("LOG FINAL ERROR EN EDICIÓN:", error);
+            productoView.notificarError?.('No se pudieron guardar los cambios: ' + error.message);
         }
     },
-
     async eliminar(id) {
         try {
             const confirmar = await productoView.confirmarAccion?.('¿Eliminar producto?', 'Esta acción no se puede deshacer.');

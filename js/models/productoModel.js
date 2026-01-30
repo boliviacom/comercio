@@ -25,12 +25,12 @@ export const productoModel = {
             data.forEach(p => {
                 if (!idsProcesados.has(p.producto_id)) {
                     idsProcesados.add(p.producto_id);
-                    
+
                     productosUnicos.push({
                         ...p,
                         id: p.producto_id,
                         nombre: p.producto_nombre,
-                        nombre_categoria: p.categoria_padre_nombre 
+                        nombre_categoria: p.categoria_padre_nombre
                             ? `${p.categoria_padre_nombre} > ${p.categoria_nombre}`
                             : (p.categoria_nombre || 'Sin Categoría')
                     });
@@ -53,36 +53,46 @@ export const productoModel = {
                 .from('v_productos_detallados')
                 .select('*')
                 .eq('producto_id', id)
-                .single();
+                .limit(1); // Cambiamos .single() por .limit(1)
 
             if (error) throw error;
-            return { ...data, id: data.producto_id };
+
+            // Verificamos si hay datos y devolvemos el primero
+            if (!data || data.length === 0) return null;
+
+            const producto = data[0];
+            return { ...producto, id: producto.producto_id };
         } catch (err) {
             console.error(`Error al obtener producto ${id}:`, err.message);
             return null;
         }
     },
+    // productoModel.js -> Función actualizar corregida
 
-    /**
-     * Actualiza un producto (Tabla base: producto)
-     * CORREGIDO: Mapeo de ws_active y price_visible
-     */
     async actualizar(id, cambios) {
         try {
-            // Construimos el payload traduciendo los nombres del componente a la DB
+            // Construimos el payload asegurando compatibilidad de nombres
             const datosLimpios = {
-                nombre: cambios.nombre,
+                nombre: cambios.nombre || cambios.producto_nombre,
                 descripcion: cambios.descripcion,
                 precio: cambios.precio !== undefined ? parseFloat(cambios.precio) : undefined,
                 stock: cambios.stock !== undefined ? parseInt(cambios.stock) : undefined,
-                imagen_url: cambios.portada, // Mapeo de portada -> imagen_url
-                // Mapeo de booleanos (acepta 1/0 o true/false)
-                mostrar_precio: cambios.price_visible !== undefined ? (cambios.price_visible == 1 || cambios.price_visible === true) : undefined,
-                habilitar_whatsapp: cambios.ws_active !== undefined ? (cambios.ws_active == 1 || cambios.ws_active === true) : undefined
+
+                // CORRECCIÓN AQUÍ: Acepta tanto 'portada' como 'imagen_url'
+                imagen_url: cambios.imagen_url || cambios.portada,
+
+                mostrar_precio: cambios.mostrar_precio !== undefined ? cambios.mostrar_precio :
+                    (cambios.price_visible !== undefined ? cambios.price_visible : undefined),
+
+                habilitar_whatsapp: cambios.habilitar_whatsapp !== undefined ? cambios.habilitar_whatsapp :
+                    (cambios.ws_active !== undefined ? cambios.ws_active : undefined)
             };
 
-            // Eliminamos propiedades undefined para no enviar basura a Supabase
-            Object.keys(datosLimpios).forEach(key => datosLimpios[key] === undefined && delete datosLimpios[key]);
+            // Limpiar undefined para no sobrescribir con nulos accidentalmente
+            Object.keys(datosLimpios).forEach(key => {
+                if (datosLimpios[key] === undefined) delete datosLimpios[key];
+            });
+
 
             const { data, error } = await supabase
                 .from('producto')
@@ -97,7 +107,6 @@ export const productoModel = {
             return { exito: false, mensaje: err.message };
         }
     },
-
     /**
      * Crea un nuevo registro (Tabla base: producto)
      * CORREGIDO: Mapeo de campos iniciales
@@ -107,7 +116,7 @@ export const productoModel = {
             const payload = {
                 nombre: datos.nombre ? datos.nombre.trim() : 'Sin Nombre',
                 descripcion: datos.descripcion || '',
-                imagen_url: datos.portada || '', 
+                imagen_url: datos.portada || '',
                 precio: parseFloat(datos.precio) || 0,
                 stock: parseInt(datos.stock) || 0,
                 visible: true,

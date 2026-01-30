@@ -73,13 +73,13 @@ export const productoView = {
 
         if (todasLasCategorias.length > 0) {
             this._categoriasDisponibles = todasLasCategorias.map(c => c.nombre || c).filter(Boolean);
-            this._maestroCategorias = todasLasCategorias; 
+            this._maestroCategorias = todasLasCategorias;
         } else {
             this._categoriasDisponibles = [...new Set(productos.map(p => p.nombre_categoria).filter(Boolean))];
         }
-        
+
         let filtrados = this._ordenarDatos(this._filtrarDatos(productos));
-        
+
         const todosConWhatsapp = filtrados.length > 0 && filtrados.every(p => p.habilitar_whatsapp);
         const todosConPrecio = filtrados.length > 0 && filtrados.every(p => p.mostrar_precio);
 
@@ -199,12 +199,12 @@ export const productoView = {
     _generarFilas(datos) {
         const inicio = (this._estado.paginaActual - 1) * this._estado.filasPorPagina;
         const paged = datos.slice(inicio, inicio + this._estado.filasPorPagina);
-        
+
         return paged.map((p, i) => {
             const dataEnc = btoa(unescape(encodeURIComponent(JSON.stringify(p))));
             const nombreMostrarCat = p.categoria_padre_nombre || 'General';
             const colorCat = this._obtenerColorCategoria(nombreMostrarCat);
-            
+
             return `
                 <tr class="hover:bg-blue-50/40 transition-colors group">
                     <td class="px-6 py-5 text-center text-xs font-bold text-slate-400">${inicio + i + 1}</td>
@@ -301,52 +301,76 @@ export const productoView = {
 
     confirmarCambioSwitch(id, campo, valorActual, esGlobal, nombre) {
         const nuevoEstado = !valorActual;
-        const accion = nuevoEstado ? 'ACTIVAR' : 'DESACTIVAR';
-        const feature = campo === 'habilitar_whatsapp' ? 'el contacto por WhatsApp' : 'la visualización de precios';
-        
+
+        // --- LÓGICA DINÁMICA DE TEXTOS ---
+        const esWhatsApp = campo === 'ws_active' || campo === 'habilitar_whatsapp';
+        const etiquetaFeature = esWhatsApp ? 'WhatsApp' : 'Precio';
+        const accionClave = nuevoEstado ? 'ACTIVAR' : 'DESACTIVAR';
+        const preposicion = nuevoEstado ? 'el' : 'el'; // Ajuste gramatical si fuera necesario
+
         let titulo, mensaje;
 
         if (esGlobal) {
             const fuenteDatos = window.productosRaw || [];
             const filtrados = this._filtrarDatos(fuenteDatos);
-            const idsParaActualizar = filtrados.map(p => p.id);
 
-            if (idsParaActualizar.length === 0) {
-                return this.notificarError('No hay productos filtrados para actualizar.');
+            // CONTEO INTELIGENTE: Solo los que están en el estado opuesto al deseado
+            const productosAActualizar = filtrados.filter(p => p[campo] !== nuevoEstado);
+            const cantidad = productosAActualizar.length;
+            const idsParaActualizar = productosAActualizar.map(p => p.id);
+
+            if (cantidad === 0) {
+                return Swal.fire({
+                    icon: 'info',
+                    title: `<span class="text-xs font-black uppercase text-slate-800">Sin cambios</span>`,
+                    text: `Todos los productos filtrados ya tienen ${etiquetaFeature} ${nuevoEstado ? 'activado' : 'desactivado'}.`,
+                    confirmButtonColor: '#3b82f6',
+                    customClass: { popup: 'rounded-[32px]' }
+                });
             }
 
-            titulo = `<span class="text-blue-600 font-black uppercase text-xs">¿Cambio Masivo?</span>`;
-            mensaje = `¿Desea ${accion} ${feature} para los <b>${idsParaActualizar.length} productos</b> filtrados?`;
-            
+            titulo = `<span class="text-blue-600 font-black uppercase text-xs">¿${accionClave} UNIVERSAL?</span>`;
+            // Mensaje dinámico según el campo y la cantidad
+            mensaje = `Se han detectado <b>${cantidad}</b> productos con <b>${etiquetaFeature}</b> ${nuevoEstado ? 'apagado' : 'encendido'}. <br> ¿Deseas ${accionClave.toLowerCase()}los todos?`;
+
             Swal.fire({
                 title: titulo,
                 html: `<p class="text-sm text-slate-600">${mensaje}</p>`,
                 icon: 'question',
                 showCancelButton: true,
-                reverseButtons: true, 
-                confirmButtonText: `SÍ, ${accion}`,
+                reverseButtons: true,
+                confirmButtonText: `SÍ, ${accionClave} (${cantidad})`,
                 cancelButtonText: 'CANCELAR',
-                confirmButtonColor: nuevoEstado ? '#10b981' : '#3b82f6',
-                customClass: { popup: 'rounded-[32px] shadow-2xl', confirmButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase', cancelButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase' }
+                confirmButtonColor: nuevoEstado ? '#10b981' : '#ef4444',
+                customClass: {
+                    popup: 'rounded-[32px] shadow-2xl',
+                    confirmButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase',
+                    cancelButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase'
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
                     productoController.toggleMasivoFiltrado(campo, nuevoEstado, idsParaActualizar);
                 }
             });
         } else {
-            titulo = `<span class="text-slate-800 font-black uppercase text-xs">¿Confirmar Cambio?</span>`;
-            mensaje = `¿Desea ${accion} ${feature} para <b>${nombre.toUpperCase()}</b>?`;
-            
+            // MENSAJE INDIVIDUAL DINÁMICO
+            titulo = `<span class="text-slate-800 font-black uppercase text-xs">Confirmar cambio</span>`;
+            mensaje = `¿Deseas ${accionClave.toLowerCase()} <b>${etiquetaFeature}</b> para <b>${nombre.toUpperCase()}</b>?`;
+
             Swal.fire({
                 title: titulo,
                 html: `<p class="text-sm text-slate-600">${mensaje}</p>`,
                 icon: 'question',
                 showCancelButton: true,
-                reverseButtons: true, 
-                confirmButtonText: `SÍ, ${accion}`,
+                reverseButtons: true,
+                confirmButtonText: `SÍ, ${accionClave}`,
                 cancelButtonText: 'CANCELAR',
                 confirmButtonColor: nuevoEstado ? '#10b981' : '#3b82f6',
-                customClass: { popup: 'rounded-[32px] shadow-2xl', confirmButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase', cancelButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase' }
+                customClass: {
+                    popup: 'rounded-[32px] shadow-2xl',
+                    confirmButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase',
+                    cancelButton: 'rounded-xl px-5 py-2.5 text-xs font-bold uppercase'
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
                     productoController.toggleEstado(id, campo, nuevoEstado);
@@ -354,7 +378,6 @@ export const productoView = {
             });
         }
     },
-
     confirmarEliminacion(dataEncoded) {
         const p = JSON.parse(decodeURIComponent(escape(atob(dataEncoded))));
         Swal.fire({
@@ -362,7 +385,7 @@ export const productoView = {
             text: `¿Confirma que desea eliminar ${p.nombre.toUpperCase()}?`,
             icon: 'warning',
             showCancelButton: true,
-            reverseButtons: true, 
+            reverseButtons: true,
             confirmButtonText: 'SÍ, ELIMINAR',
             cancelButtonText: 'CANCELAR',
             confirmButtonColor: '#dc2626',
@@ -401,8 +424,8 @@ export const productoView = {
     filtrarSugerencias(query) {
         const panel = document.getElementById('suggestions-panel');
         if (!panel) return;
-        const coincidencias = this._categoriasDisponibles.filter(cat => 
-            cat.toLowerCase().includes(query.toLowerCase()) && 
+        const coincidencias = this._categoriasDisponibles.filter(cat =>
+            cat.toLowerCase().includes(query.toLowerCase()) &&
             !this._estado.categoriasSeleccionadas.includes(cat)
         );
         if (coincidencias.length > 0) {
@@ -423,14 +446,14 @@ export const productoView = {
         let resultados = [...d];
         if (this._estado.busqueda) {
             const t = this._estado.busqueda.toLowerCase();
-            resultados = resultados.filter(x => 
-                x.nombre.toLowerCase().includes(t) || 
+            resultados = resultados.filter(x =>
+                x.nombre.toLowerCase().includes(t) ||
                 (x.nombre_categoria && x.nombre_categoria.toLowerCase().includes(t)) ||
                 (x.categoria_padre_nombre && x.categoria_padre_nombre.toLowerCase().includes(t))
             );
         }
         if (this._estado.categoriasSeleccionadas.length > 0) {
-            resultados = resultados.filter(x => 
+            resultados = resultados.filter(x =>
                 this._estado.categoriasSeleccionadas.includes(x.nombre_categoria) ||
                 this._estado.categoriasSeleccionadas.includes(x.categoria_nombre) ||
                 this._estado.categoriasSeleccionadas.includes(x.categoria_padre_nombre)
@@ -467,7 +490,7 @@ export const productoView = {
         if (!this._estado.categoriasSeleccionadas.includes(cat)) {
             this._estado.categoriasSeleccionadas.push(cat);
             this._estado.paginaActual = 1;
-            this._estado.busqueda = ''; 
+            this._estado.busqueda = '';
             productoController.refrescarVista();
         }
     },

@@ -2,7 +2,7 @@ import { supabase } from '../config/supabaseClient.js';
 
 /**
  * Modelo para la gestión de galería de productos
- * Nexus Admin Suite - Model Layer
+ * Nexus Admin Suite - Model Layer (Optimized for Sync)
  */
 export const galeriaProductoModel = {
 
@@ -28,24 +28,19 @@ export const galeriaProductoModel = {
 
     /**
      * MÉTODO PRIVADO: Normalización de datos
-     * Evita que se guarden objetos JSON en columnas de texto.
+     * Evita que se guarden objetos JSON en columnas de texto (URL).
      */
     _normalizarItem(item) {
         let urlFinal = '';
         let tipoFinal = 'imagen';
 
-        // Si el item es directamente un string (la URL)
         if (typeof item === 'string') {
             urlFinal = item;
-        }
-        // Si es el objeto que viene del Controller o del View
-        else if (item && typeof item === 'object') {
-            // Prioridad 1: Buscar la URL en las propiedades comunes
+        } else if (item && typeof item === 'object') {
             urlFinal = item.url || item.file_url || '';
             tipoFinal = item.tipo || 'imagen';
         }
 
-        // Limpieza final: Asegurar que sea string y no contenga rastro de objetos
         return {
             url: String(urlFinal).trim(),
             tipo: String(tipoFinal).toLowerCase().includes('video') ? 'video' : 'imagen'
@@ -80,33 +75,42 @@ export const galeriaProductoModel = {
 
     /**
      * Inserta elementos en lote (Bulk Insert)
-     * Corregido para mapear correctamente las columnas de la DB.
+     * Utilizado tras la limpieza física en ediciones.
      */
     async createLote(idProducto, itemsMultimedia) {
         try {
-            // Mapeamos los items asegurándonos de que 'url' sea solo el string
-            const payload = itemsMultimedia.map(item => ({
-                id_producto: idProducto,
-                url: item.url,    // <--- Aquí debe llegar el string, no {url: '...'}
-                tipo: item.tipo,  // <--- Aquí 'imagen' o 'video'
-                orden: item.orden,
-                visible: true
-            }));
+            if (!itemsMultimedia || itemsMultimedia.length === 0) return { exito: true, data: [] };
+
+            const payload = itemsMultimedia.map(item => {
+                const cleaned = this._normalizarItem(item);
+                return {
+                    id_producto: idProducto,
+                    url: cleaned.url,
+                    tipo: cleaned.tipo,
+                    orden: parseInt(item.orden) || 0,
+                    visible: true
+                };
+            });
+
+            console.log(`DB: Intentando insertar lote de ${payload.length} elementos para producto ${idProducto}`);
 
             const { data, error } = await supabase
                 .from('galeria_producto')
-                .insert(payload);
+                .insert(payload)
+                .select();
 
             if (error) throw error;
+
+            console.log("DB: Lote insertado correctamente.");
             return { exito: true, data };
         } catch (error) {
-            console.error("Error en GaleriaModel:", error.message);
+            console.error("Model Error [createLote]:", error.message);
             throw error;
         }
     },
 
     /**
-     * Actualiza un elemento multimedia
+     * Actualiza un elemento multimedia individual
      */
     async update(id, updates) {
         try {
@@ -131,6 +135,7 @@ export const galeriaProductoModel = {
 
     /**
      * Borrado lógico (Soft Delete)
+     * Se usa normalmente para eliminaciones simples desde la lista.
      */
     async delete(id) {
         try {
@@ -148,19 +153,34 @@ export const galeriaProductoModel = {
     },
 
     /**
-     * Borrado físico (Limpieza antes de re-insertar en Edición)
+     * Borrado físico (Limpieza total por producto)
+     * Crucial para el proceso de Edición: Borra todo para evitar duplicados 
+     * antes de re-insertar el nuevo estado de la galería.
      */
+    /**
+ * Borrado físico de la galería para un producto.
+ * Esto limpia el espacio antes de insertar el nuevo orden/archivos.
+ */
     async limpiarGaleria(idProducto) {
         try {
-            const { error } = await supabase
+            console.log(`DB: Ejecutando DELETE físico para producto ${idProducto}`);
+
+            const { error, count } = await supabase
                 .from('galeria_producto')
-                .delete()
+                .delete() // <--- Borrado físico real
                 .eq('id_producto', idProducto);
 
             if (error) throw error;
+
+            console.log("DB: Registros eliminados físicamente.");
             return true;
         } catch (error) {
-            console.error("Model Error [limpiarGaleria]:", error.message);
+            // Si falla el delete, intentamos un soft delete masivo como plan B
+            console.error("Fallo el delete físico, intentando ocultarlos:", error.message);
+            await supabase
+                .from('galeria_producto')
+                .update({ visible: false })
+                .eq('id_producto', idProducto);
             return false;
         }
     }

@@ -119,7 +119,7 @@ export const productManager = {
                                     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
                                     const secs = (seconds % 60).toString().padStart(2, '0');
                                     const percent = (seconds / limit) * 100;
-                                    
+
                                     timerEl.innerText = `${mins}:${secs} / 01:50`;
                                     progressEl.style.width = `${percent}%`;
 
@@ -133,8 +133,8 @@ export const productManager = {
                             };
                         }
                     },
-                    willClose: () => { 
-                        if (this._stream) this._stream.getTracks().forEach(t => t.stop()); 
+                    willClose: () => {
+                        if (this._stream) this._stream.getTracks().forEach(t => t.stop());
                         if (this._timerInterval) clearInterval(this._timerInterval);
                     }
                 });
@@ -146,14 +146,14 @@ export const productManager = {
             const extension = tipo === 'video' ? 'webm' : 'jpg';
             const mime = tipo === 'video' ? 'video/webm' : 'image/jpeg';
             const nombre = `nexus_${Date.now()}.${extension}`;
-            
+
             const fileFinal = new File([blob], nombre, { type: mime });
-            
-            return { 
-                archivo: fileFinal, 
-                url: URL.createObjectURL(fileFinal), 
-                tipo, 
-                nombre 
+
+            return {
+                archivo: fileFinal,
+                url: URL.createObjectURL(fileFinal),
+                tipo,
+                nombre
             };
         }
     },
@@ -161,9 +161,17 @@ export const productManager = {
     async start(containerId, categorias, dPrevios = {}) {
         this._mainContainer = document.getElementById(containerId);
         if (!this._mainContainer) return;
+
+        // 1. Limpiar estados anteriores para evitar que se mezclen productos
+        this._galeriaArchivos = [];
+        this._categoriasSeleccionadas = [];
+        this._portadaArchivo = { tipo: 'local', data: null, url: '' };
+
         this._originalContent = this._mainContainer.innerHTML;
         window.categoriasRaw = categorias;
         this._pasoActual = 1;
+
+        // 2. Mapeo de datos temporales
         this._datosTemporales = {
             nombre: dPrevios.nombre || '',
             precio: dPrevios.precio || '',
@@ -173,32 +181,44 @@ export const productManager = {
             price_visible: dPrevios.price_visible !== undefined ? dPrevios.price_visible : true,
             id: dPrevios.id || null
         };
-        this._categoriasSeleccionadas = dPrevios.categoriasIds || [];
-        this._galeriaArchivos = (dPrevios.galeria || []).map(item => {
-            const info = this.obtenerInfoVideo(item.url || item.file_url);
-            return {
-                id: item.id || Date.now().toString() + Math.random(),
-                tipo: item.tipo || 'imagen',
-                url: item.url || item.file_url,
-                file: null,
-                thumb: item.tipo === 'video' ? info.thumb : (item.url || item.file_url),
-                nombre: item.nombre || 'Archivo existente',
-                orden: item.orden || 0
-            };
-        });
 
-        if (dPrevios.imagen_url || dPrevios.portada) {
-            const path = dPrevios.imagen_url || dPrevios.portada;
-            this._portadaArchivo = typeof path === 'string'
-                ? { tipo: 'url', url: path, data: null }
-                : { tipo: 'local', data: path, url: URL.createObjectURL(path) };
-        } else {
-            this._portadaArchivo = { tipo: 'local', data: null, url: '' };
+        this._categoriasSeleccionadas = dPrevios.categoriasIds || [];
+
+        // 3. Carga y ORDENAMIENTO de Galería
+        if (dPrevios.galeria && Array.isArray(dPrevios.galeria)) {
+            this._galeriaArchivos = dPrevios.galeria.map((item, index) => {
+                const url = item.url || item.file_url;
+                const info = this.obtenerInfoVideo(url);
+                return {
+                    id: item.id || `db-${index}`,
+                    tipo: item.tipo || 'imagen',
+                    url: url,
+                    file: null,
+                    thumb: item.tipo === 'video' ? info.thumb : url,
+                    nombre: item.nombre || 'Archivo guardado',
+                    // Asegurar que el orden sea número y manejar el 0 correctamente
+                    orden: (item.orden !== undefined) ? parseInt(item.orden) : index
+                };
+            });
+
+            // Ordenar físicamente el array por el campo orden
+            this._galeriaArchivos.sort((a, b) => a.orden - b.orden);
+        }
+
+        // 4. Carga de Portada
+        const pathPortada = dPrevios.portada || dPrevios.imagen_url;
+        if (pathPortada) {
+            this._portadaArchivo = typeof pathPortada === 'string'
+                ? { tipo: 'url', url: pathPortada, data: null }
+                : { tipo: 'local', data: pathPortada, url: URL.createObjectURL(pathPortada) };
         }
 
         this.render();
         this.injectStyles();
-        return new Promise((resolve) => { this._resolve = resolve; });
+
+        return new Promise((resolve) => {
+            this._resolve = resolve;
+        });
     },
 
     obtenerInfoVideo(url, file = null) {
@@ -281,7 +301,7 @@ export const productManager = {
             }
             return;
         }
-        
+
         if (metodo === 'local') {
             const { value: file } = await Swal.fire({ title: 'Cargar Imagen Local', input: 'file', inputAttributes: { 'accept': 'image/*' } });
             if (file) { this._portadaArchivo = { tipo: 'imagen', data: file, url: URL.createObjectURL(file) }; this.updateUI(); }
@@ -361,16 +381,17 @@ export const productManager = {
     },
 
     toggleHija(id) {
-        this._categoriasSeleccionadas = this._categoriasSeleccionadas.includes(id) 
-            ? this._categoriasSeleccionadas.filter(i => i !== id) 
+        this._categoriasSeleccionadas = this._categoriasSeleccionadas.includes(id)
+            ? this._categoriasSeleccionadas.filter(i => i !== id)
             : [...this._categoriasSeleccionadas, id];
         this.updateUI();
     },
 
     setOrdenGaleria(id, nuevoValor) {
         const nuevoOrden = parseInt(nuevoValor) || 0;
-        const itemCambiado = this._galeriaArchivos.find(i => i.id === id);
-        
+        // Cambia esta línea para ser más flexible con los tipos de datos
+        const itemCambiado = this._galeriaArchivos.find(i => i.id == id);
+
         if (!itemCambiado) return;
 
         const ordenAnterior = itemCambiado.orden;
@@ -390,7 +411,19 @@ export const productManager = {
         this._galeriaArchivos.sort((a, b) => a.orden - b.orden);
         this.updateUI();
     },
+    // --- GESTIÓN DE GALERÍA ---
+    eliminarArchivo(id) {
+        // IMPORTANTE: Asegúrate de usar != y de asignar el resultado de vuelta al array
+        this._galeriaArchivos = this._galeriaArchivos.filter(item => item.id != id);
 
+        // Re-ordenar para que no queden huecos en los índices
+        this._galeriaArchivos.forEach((item, index) => {
+            item.orden = index + 1;
+        });
+
+        // Actualizar la interfaz visual
+        this.updateUI();
+    },
     injectStyles() {
         if (document.getElementById('nexus-tooltips-styles')) return;
         const style = document.createElement('style');
@@ -555,27 +588,41 @@ export const productManager = {
     },
 
     _renderGaleriaList() {
-        if (this._galeriaArchivos.length === 0) return `<div class="p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-bold text-[10px] uppercase tracking-widest">Sin multimedia adicional</div>`;
+        if (this._galeriaArchivos.length === 0) {
+            return `<div class="py-10 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                    <p class="text-slate-400 text-[10px] font-black uppercase">No hay archivos en la galería</p>
+                </div>`;
+        }
 
-        return this._galeriaArchivos.map(item => `
-            <div class="group flex items-center gap-5 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:border-blue-200 transition-all">
-                <div class="flex flex-col items-center bg-slate-50 p-2 rounded-xl">
-                    <span class="text-[7px] font-black text-slate-400 uppercase mb-1">ORDEN</span>
-                    <input type="number" value="${item.orden}" onchange="window.productManager.setOrdenGaleria('${item.id}', this.value)" class="w-10 text-center bg-transparent font-black text-blue-600 text-sm outline-none border-none p-0">
+        return this._galeriaArchivos.map((item) => `
+        <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-3xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
+            <div class="w-16 h-16 rounded-2xl overflow-hidden bg-slate-200 flex-shrink-0 relative">
+                <img src="${item.thumb || item.url}" class="w-full h-full object-cover">
+                ${item.tipo === 'video' ? '<span class="material-symbols-outlined absolute inset-0 flex items-center justify-center text-white bg-black/20 text-xl">play_circle</span>' : ''}
+            </div>
+
+            <div class="flex-1">
+                <p class="text-[10px] font-black text-slate-800 uppercase truncate w-32">${item.nombre}</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase">Posición:</span>
+                    <input type="number" 
+                        value="${item.orden}" 
+                        min="0" 
+                        onchange="window.productManager.setOrdenGaleria('${item.id}', this.value)"
+                        class="w-12 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-center py-1 focus:border-blue-500 outline-none">
                 </div>
-                <div data-nexus-tooltip="Previsualizar" class="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden relative cursor-pointer" onclick="window.productManager.verPreviewAmpliado('${item.url}', '${item.tipo}')">
-                    ${item.tipo === 'video' ? `<img src="${item.thumb}" class="w-full h-full object-cover opacity-60"><div class="absolute inset-0 flex items-center justify-center"><span class="material-symbols-outlined text-white text-xl">play_circle</span></div>` : `<img src="${item.url}" class="w-full h-full object-cover">`}
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-[11px] font-black text-slate-800 uppercase truncate">${item.nombre}</p>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="px-2 py-0.5 bg-slate-100 rounded text-[8px] font-black text-slate-400 uppercase">${item.tipo}</span>
-                    </div>
-                </div>
-                <button onclick="window.productManager._galeriaArchivos = window.productManager._galeriaArchivos.filter(i => i.id !== '${item.id}'); window.productManager.updateUI()" class="p-3 text-slate-300 hover:text-red-500 transition-all">
-                    <span class="material-symbols-outlined">delete</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="window.productManager.verPreviewAmpliado('${item.url}', '${item.tipo}')" class="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                    <span class="material-symbols-outlined text-xl">visibility</span>
                 </button>
-            </div>`).join('');
+                <button onclick="window.productManager.eliminarArchivo('${item.id}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                    <span class="material-symbols-outlined text-xl">delete</span>
+                </button>
+            </div>
+        </div>
+    `).join('');
     },
 
     navSiguiente() {
@@ -583,75 +630,72 @@ export const productManager = {
 
         // --- VALIDACIÓN PASO 1: Información Detallada ---
         if (this._pasoActual === 1) {
-            if (!d.nombre.trim()) {
-                this._alertError('El nombre del producto es obligatorio');
-                return;
-            }
-            if (!d.precio || parseFloat(d.precio) <= 0) {
-                this._alertError('Debes ingresar un precio válido mayor a 0');
-                return;
-            }
-            if (!d.descripcion.trim()) {
-                this._alertError('La descripción es necesaria para informar a tus clientes');
-                return;
-            }
+            if (!d.nombre.trim()) return this._alertError('El nombre del producto es obligatorio');
+            if (!d.precio || parseFloat(d.precio) <= 0) return this._alertError('Ingresa un precio válido');
+            if (!d.descripcion.trim()) return this._alertError('La descripción es obligatoria');
         }
 
         // --- VALIDACIÓN PASO 2: Categorización ---
         if (this._pasoActual === 2) {
             if (this._categoriasSeleccionadas.length === 0) {
-                this._alertError('Selecciona al menos una subcategoría para organizar tu producto');
-                return;
+                return this._alertError('Selecciona al menos una subcategoría');
             }
         }
 
         // --- VALIDACIÓN PASO 3: Multimedia Obligatoria ---
         if (this._pasoActual === 3) {
-            if (!this._portadaArchivo.url) {
-                this._alertError('Falta la imagen de portada. Es lo primero que verán tus clientes');
-                return;
-            }
-            if (this._galeriaArchivos.length === 0) {
-                this._alertError('La galería no puede estar vacía. Agrega al menos una imagen o video adicional');
-                return;
-            }
+            if (!this._portadaArchivo.url) return this._alertError('La portada es obligatoria');
+            if (this._galeriaArchivos.length === 0) return this._alertError('La galería no puede estar vacía');
 
             // --- PROCESO DE GUARDADO FINAL ---
-            const galeriaLimpia = this._galeriaArchivos.map(i => ({
-                file: i.file,
+
+            // 1. Mapear SOLO los archivos que sobrevivieron al borrado en la vista
+            const galeriaLimpia = this._galeriaArchivos.map((i, index) => ({
+                id: i.id, // Importante para que el controller sepa si es nuevo o viejo
+                file: i.file || null,
                 url: i.url,
-                tipo: i.tipo,
-                orden: parseInt(i.orden) || 0,
-                nombre: i.nombre
+                tipo: i.tipo || 'imagen',
+                orden: index + 1, // Resetear el orden correlativo
+                nombre: i.nombre || d.nombre
             }));
 
+            // 2. Construir objeto final
             const dataFinal = {
-                ...this._datosTemporales,
-                ws_active: this._datosTemporales.ws_active ? 1 : 0,
-                price_visible: this._datosTemporales.price_visible ? 1 : 0,
-                precio: parseFloat(this._datosTemporales.precio) || 0,
-                stock: parseInt(this._datosTemporales.stock) || 0,
-                categoriasIds: this._categoriasSeleccionadas,
+                id: d.id || null,
+                nombre: d.nombre.trim(),
+                ws_active: d.ws_active ? 1 : 0,
+                price_visible: d.price_visible ? 1 : 0,
+                precio: parseFloat(d.precio) || 0,
+                stock: parseInt(d.stock) || 0,
+                descripcion: d.descripcion.trim(),
+                categoriasIds: [...this._categoriasSeleccionadas],
                 portada: this._portadaArchivo.data || this._portadaArchivo.url,
                 galeria: galeriaLimpia
             };
 
             Swal.fire({
                 title: '¡Excelente!',
-                text: 'Producto configurado correctamente',
+                text: 'Configuración finalizada',
                 icon: 'success',
-                timer: 1500,
+                timer: 1000,
                 showConfirmButton: false
             });
 
-            this._mainContainer.innerHTML = this._originalContent;
-            this._resolve(dataFinal);
+            // 3. Limpieza de interfaz y resolución
+            if (this._mainContainer) {
+                this._mainContainer.innerHTML = this._originalContent;
+            }
+
+            if (typeof this._resolve === 'function') {
+                this._resolve(dataFinal);
+            }
+
         } else {
+            // Avance de paso normal
             this._pasoActual++;
             this.updateUI();
         }
     },
-
     // Función auxiliar para alertas rápidas y limpias
     _alertError(mensaje) {
         Swal.fire({
@@ -664,6 +708,25 @@ export const productManager = {
             timerProgressBar: true,
             background: '#fff1f2',
             color: '#be123c'
+        });
+    },
+    cancelarEdicion() {
+        Swal.fire({
+            title: '¿Salir del editor?',
+            text: "Se perderán los cambios no guardados.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, volver al listado',
+            cancelButtonText: 'Continuar editando'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Restauramos el contenido original del contenedor
+                this._mainContainer.innerHTML = this._originalContent;
+                // Si necesitas ejecutar una lógica externa al cerrar, puedes llamarla aquí
+                if (this._resolve) this._resolve(null);
+            }
         });
     },
 };
