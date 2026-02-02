@@ -1,101 +1,103 @@
 import { supabase } from '../config/supabaseClient.js';
 
 export const configuracionColumnasModel = {
+
     /**
-     * Obtiene la configuración con prioridad: 
-     * 1. Usuario específico 
-     * 2. Rol del usuario
+     * Obtiene la configuración guardada con jerarquía de prioridad.
+     * 1. Usuario específico | 2. Rol del usuario.
      */
     async obtenerConfiguracion(tablaNombre, usuarioId = null, rolId = null) {
         try {
             let query = supabase
                 .from('configuracion_columnas')
-                .select('columnas_visibles, usuario_id, rol_id')
+                .select('columnas_visibles')
                 .eq('tabla_nombre', tablaNombre);
 
-            // --- CORRECCIÓN: Filtros Dinámicos ---
-            // Solo añadimos al .or() los valores que realmente existen.
-            let filtros = [];
-            if (usuarioId && usuarioId !== 'null') {
-                filtros.push(`usuario_id.eq.${usuarioId}`);
-            }
-            if (rolId && rolId !== 'null') {
-                filtros.push(`rol_id.eq.${rolId}`);
+            if (usuarioId) {
+                // Prioridad 1: Configuración específica del usuario
+                query = query.eq('usuario_id', usuarioId).is('rol_id', null);
+            } else if (rolId) {
+                // Prioridad 2: Configuración del grupo (rol)
+                query = query.eq('rol_id', rolId).is('usuario_id', null);
             }
 
-            // Si hay filtros, aplicamos el .or(), si no, no tiene sentido consultar
-            if (filtros.length > 0) {
-                query = query.or(filtros.join(','));
-            } else {
-                return null; 
-            }
-
+            // Usamos .select() normal en lugar de .maybeSingle() para evitar el error 406/400
             const { data, error } = await query;
+            if (data && data.length > 0) return data[0].columnas_visibles;
 
             if (error) throw error;
-            if (!data || data.length === 0) return null;
 
-            // Lógica de prioridad: Si existe la del usuario, devolvemos esa.
-            const userConfig = data.find(c => c.usuario_id === usuarioId);
-            if (userConfig) return userConfig.columnas_visibles;
-
-            // Si no, la del rol.
-            const roleConfig = data.find(c => c.rol_id === rolId);
-            if (roleConfig) return roleConfig.columnas_visibles;
+            // Si hay resultados, tomamos el primero (el más reciente o único)
+            if (data && data.length > 0) {
+                return data[0].columnas_visibles;
+            }
 
             return null;
         } catch (err) {
-            console.error('Error en configuracionColumnasModel.obtener:', err);
+            console.error('Error al obtener configuración:', err.message);
             return null;
         }
     },
 
     /**
-     * Guarda o actualiza usando UPSERT aprovechando los UNIQUE constraints
+     * Guarda o actualiza la configuración (UPSERT).
+     * CORRECCIÓN: Se envía como [array] para satisfacer los requisitos de la API.
      */
     async guardarConfiguracion(config) {
         try {
-            // --- CORRECCIÓN: Limpieza de Objeto ---
-            // Aseguramos que los campos vacíos sean null real y no strings vacíos o "null"
+            // En configuracionColumnasModel.js
+            const esUsuario = !!(config.usuario_id && config.usuario_id !== 'null');
+
             const payload = {
                 tabla_nombre: config.tabla_nombre,
                 columnas_visibles: config.columnas_visibles,
-                usuario_id: (config.usuario_id && config.usuario_id !== 'null') ? config.usuario_id : null,
-                rol_id: (config.rol_id && config.rol_id !== 'null') ? config.rol_id : null
+                usuario_id: esUsuario ? config.usuario_id : null,
+                rol_id: esUsuario ? null : config.rol_id
             };
+
+            // Ahora que creamos las constraints, esto coincidirá perfectamente
+            const columnasConflicto = esUsuario
+                ? 'tabla_nombre,usuario_id'
+                : 'tabla_nombre,rol_id';
 
             const { error } = await supabase
                 .from('configuracion_columnas')
-                .upsert(payload, { 
-                    onConflict: payload.usuario_id ? 'tabla_nombre,usuario_id' : 'tabla_nombre,rol_id' 
+                .upsert(payload, {
+                    onConflict: columnasConflicto
                 });
+            if (error) {
+                console.error('Error detallado de Supabase:', error);
+                throw error;
+            }
 
-            if (error) throw error;
             return { exito: true };
         } catch (err) {
-            console.error('Error al guardar configuración:', err.message);
+            console.error('Error crítico en guardarConfiguracion:', err.message);
             return { exito: false, mensaje: err.message };
         }
     },
-
     /**
-     * Elimina la configuración personalizada
+     * Elimina la configuración personalizada.
      */
     async resetearConfiguracion(tablaNombre, destinoTipo, destinoId) {
         try {
-            const query = supabase
+            let query = supabase
                 .from('configuracion_columnas')
                 .delete()
                 .eq('tabla_nombre', tablaNombre);
 
-            if (destinoTipo === 'usuario') query.eq('usuario_id', destinoId);
-            else query.eq('rol_id', destinoId);
+            if (destinoTipo === 'usuario') {
+                query = query.eq('usuario_id', destinoId);
+            } else {
+                query = query.eq('rol_id', destinoId);
+            }
 
             const { error } = await query;
             if (error) throw error;
+
             return { exito: true };
         } catch (err) {
-            console.error('Error al resetear configuración:', err.message);
+            console.error('Error al resetear:', err.message);
             return { exito: false, mensaje: err.message };
         }
     }

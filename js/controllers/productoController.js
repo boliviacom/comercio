@@ -5,6 +5,8 @@ import { productoCategoriaModel } from '../models/productoCategoriaModel.js';
 import { galeriaProductoModel } from '../models/galeriaProductoModel.js';
 import { productManager } from '../modals/createProduct.js';
 import { supabase } from '../config/supabaseClient.js';
+import { configuracionColumnasController } from '../controllers/configuracionColumnasController.js';
+import { detallesProductoView } from '../views/detallesProductoView.js';
 
 export const productoController = {
 
@@ -86,6 +88,63 @@ export const productoController = {
         } catch (error) {
             console.error(error);
             productoView.notificarError?.('No se pudo cargar el catálogo de productos.');
+        }
+    },
+
+    async verDetalle(id) {
+        try {
+            productoView.mostrarCargando?.('Obteniendo información...');
+
+            // 1. Carga paralela de toda la data necesaria
+            const [producto, idsCategorias, galeria, todasLasCategorias] = await Promise.all([
+                productoModel.obtenerPorId(id),
+                productoCategoriaModel.obtenerCategoriasPorProducto(id), // Devuelve [ID1, ID2]
+                galeriaProductoModel.getByProducto(id),
+                categoriasModel.obtenerTodas() // Necesario para sacar los nombres
+            ]);
+
+            if (!producto) throw new Error('No se encontró el producto.');
+
+            // 2. ENRIQUECIMIENTO DE DATOS: Mapear IDs a objetos completos con Nombre
+            const categoriasEnriquecidas = idsCategorias.map(idVinculado => {
+                const catInfo = todasLasCategorias.find(c => c.id === idVinculado);
+                return catInfo ? catInfo : { id: idVinculado, nombre: 'Categoría ' + idVinculado };
+            });
+
+            // 3. NORMALIZACIÓN DEL PRODUCTO: Asegurar que los campos clave existan
+            const productoNormalizado = {
+                ...producto,
+                nombre: producto.nombre || producto.producto_nombre || 'Sin nombre definido',
+                mostrar_precio: producto.mostrar_precio ?? producto.price_visible ?? false,
+                habilitar_whatsapp: producto.habilitar_whatsapp ?? producto.ws_active ?? false
+            };
+
+            Swal.close();
+
+            const contenedorPrincipal = document.getElementById('content-area');
+
+            // 4. Renderizado
+            contenedorPrincipal.innerHTML = detallesProductoView.render(
+                {
+                    producto: productoNormalizado,
+                    categorias: categoriasEnriquecidas,
+                    subcategorias: [], // Mapear igual si tienes el modelo de subcategorías
+                    galeria: galeria || []
+                },
+                (p) => this.mostrarFormularioEditar(p.id),
+                () => this.refrescarVista()
+            );
+
+            // 5. Inicializar Eventos
+            detallesProductoView.initEventListeners(
+                productoNormalizado,
+                (p) => this.mostrarFormularioEditar(p.id),
+                () => this.refrescarVista()
+            );
+
+        } catch (error) {
+            console.error("Error al mostrar detalle:", error);
+            productoView.notificarError?.('No se pudo cargar la ficha del producto.');
         }
     },
 
@@ -310,3 +369,4 @@ export const productoController = {
 };
 
 window.productoController = productoController;
+window.configuracionColumnasController = configuracionColumnasController;

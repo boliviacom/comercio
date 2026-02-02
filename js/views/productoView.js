@@ -63,6 +63,9 @@ export const productoView = {
     /**
      * RENDER PRINCIPAL
      */
+    /**
+     * RENDER PRINCIPAL
+     */
     render(productos, todasLasCategorias = []) {
         const contenedor = document.getElementById('content-area');
         if (!contenedor) return;
@@ -126,12 +129,20 @@ export const productoView = {
                             <div id="suggestions-panel" class="hidden absolute z-[100] w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2"></div>
                         </div>
 
-                        <button onclick="productoView.gestionarOrden()" 
-                                title="Cambiar orden alfabético"
-                                class="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:text-blue-600 transition-all shadow-sm font-bold text-xs uppercase">
-                            <span class="material-symbols-outlined text-lg">${this._estado.orden === 'asc' ? 'sort_by_alpha' : 'text_rotate_vertical'}</span>
-                            ${this._estado.orden === 'asc' ? 'A-Z' : 'Z-A'}
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button onclick="productoView.gestionarOrden()" 
+                                    title="Cambiar orden alfabético"
+                                    class="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:text-blue-600 transition-all shadow-sm font-bold text-xs uppercase">
+                                <span class="material-symbols-outlined text-lg">${this._estado.orden === 'asc' ? 'sort_by_alpha' : 'text_rotate_vertical'}</span>
+                                ${this._estado.orden === 'asc' ? 'A-Z' : 'Z-A'}
+                            </button>
+
+                            <button onclick="configuracionColumnasController.iniciarFlujoConfiguracion('productos', (cols) => productoController.refrescarVista(cols))" 
+        title="Configurar visibilidad de columnas"
+        class="w-[48px] h-[48px] flex items-center justify-center bg-white border border-slate-200 text-slate-900 rounded-2xl hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+    <span class="material-symbols-outlined text-[22px]">view_column</span>
+</button>
+                        </div>
                     </div>
 
                     ${this._renderEtiquetasFiltro()}
@@ -194,7 +205,6 @@ export const productoView = {
             }
         });
     },
-
     // --- TABLA Y FILAS ---
     _generarFilas(datos) {
         const inicio = (this._estado.paginaActual - 1) * this._estado.filasPorPagina;
@@ -234,10 +244,10 @@ export const productoView = {
                                     class="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
                                 <span class="material-symbols-outlined text-sm">edit</span>
                             </button>
-                            <button onclick="productoView.verFichaDetalle('${p.id}')" 
-                                    class="w-9 h-9 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                                <span class="material-symbols-outlined text-sm">visibility</span>
-                            </button>
+                           <button onclick="productoController.verDetalle('${p.id}')" 
+        class="w-9 h-9 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+    <span class="material-symbols-outlined text-sm">visibility</span>
+</button>
                             <button onclick="productoView.confirmarEliminacion('${dataEnc}')" 
                                     class="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-sm">
                                 <span class="material-symbols-outlined text-sm">delete</span>

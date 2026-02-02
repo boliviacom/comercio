@@ -4,35 +4,43 @@ import { configuracionColumnasView } from '../views/configuracionColumnasView.js
 
 export const configuracionColumnasController = {
 
-    /**
-     * Obtiene las columnas visibles consultando el modelo.
-     */
-    obtenerColumnasVisibles: async function (tablaNombre, columnasPorDefecto) {
+    ESQUEMAS: {
+        productos: ['nro', 'imagen', 'nombre_producto', 'categoria', 'precio', 'stock', 'whatsapp'],
+    },
+    // --- Agregar esto dentro de configuracionColumnasController ---
+
+    obtenerColumnasVisibles: async function (tablaNombre, columnasPorDefecto, usuarioId = null, rolId = null) {
         try {
-            const session = JSON.parse(localStorage.getItem('usuario_geek'));
-            const usuarioId = session?.id || null;
-            const rolId = session?.rol || null;
+            // 1. Intentar obtener la configuración de la DB
+            // Nota: configuracionColumnasModel.obtenerConfiguracion ya maneja la jerarquía
+            const guardadas = await configuracionColumnasModel.obtenerConfiguracion(tablaNombre, usuarioId, rolId);
 
-            const configuracion = await configuracionColumnasModel.obtenerConfiguracion(
-                tablaNombre,
-                usuarioId,
-                rolId
-            );
+            // 2. Si hay datos guardados, los usamos
+            if (guardadas && guardadas.length > 0) {
+                return guardadas;
+            }
 
-            return configuracion || columnasPorDefecto;
+            // 3. Si no hay nada guardado, devolvemos lo que el controller nos mandó por defecto
+            return columnasPorDefecto;
         } catch (error) {
-            console.error("Error al obtener columnas visibles:", error);
+            console.error(`Error al recuperar columnas para ${tablaNombre}:`, error);
             return columnasPorDefecto;
         }
     },
 
-    /**
-     * Maneja el flujo lógico de la configuración con soporte para navegación atrás
-     */
+    iniciarFlujoConfiguracion: async function (tablaNombre, callbackRecargar) {
+        const todasLasColumnas = this.ESQUEMAS[tablaNombre];
+        if (!todasLasColumnas) {
+            console.error(`Error: El esquema '${tablaNombre}' no está definido.`);
+            return;
+        }
+        await this.abrirSelectorColumnas(tablaNombre, todasLasColumnas, callbackRecargar);
+    },
+
     abrirSelectorColumnas: async function (tablaNombre, todasLasColumnas, callbackRecargar) {
         let paso = 1;
         let rolSeleccionado = null;
-        let ciIngresado = "";
+        let ciSeleccionado = "";
         let usuarioDestino = null;
         let nombreVisualDestino = "";
         let seleccionadas = null;
@@ -41,96 +49,107 @@ export const configuracionColumnasController = {
             const { roles } = await usuariosModel.obtenerDestinosConfiguracion();
 
             while (paso > 0 && paso <= 4) {
-                // --- PASO 1: SELECCIÓN DE ROL ---
+
+                // --- PASO 1: SELECCIONAR ROL ---
                 if (paso === 1) {
                     rolSeleccionado = await configuracionColumnasView.solicitarSeleccionRol(roles);
-                    if (!rolSeleccionado) return; // Cerrar flujo
+                    if (!rolSeleccionado) return;
                     paso = 2;
+                    continue; // Salta al siguiente ciclo del while
                 }
 
-                // --- PASO 2: ESPECIFICAR USUARIO ---
+                // --- PASO 2: SELECCIONAR USUARIO ---
                 if (paso === 2) {
-                    ciIngresado = await configuracionColumnasView.solicitarBusquedaUsuario(rolSeleccionado);
-                    
-                    if (ciIngresado === 'BACK') { paso = 1; continue; }
-                    if (ciIngresado === null) return;
+                    configuracionColumnasView.mostrarCargando('Buscando personal del grupo...');
+                    const todosLosUsuarios = await usuariosModel.obtenerTodos();
+                    const usuariosFiltrados = todosLosUsuarios.filter(u => u.rol === rolSeleccionado);
+                    Swal.close();
+
+                    ciSeleccionado = await configuracionColumnasView.solicitarBusquedaUsuario(rolSeleccionado, usuariosFiltrados);
+
+                    if (ciSeleccionado === 'BACK') {
+                        paso = 1;
+                        continue;
+                    }
+                    if (ciSeleccionado === null) return;
 
                     usuarioDestino = null;
-                    nombreVisualDestino = `ROL: ${rolSeleccionado.toUpperCase()}`;
+                    nombreVisualDestino = `GRUPO: ${rolSeleccionado.toUpperCase()}`;
 
-                    if (ciIngresado !== "") {
-                        configuracionColumnasView.mostrarCargando();
-                        const todosLosUsuarios = await usuariosModel.obtenerTodos();
-                        usuarioDestino = todosLosUsuarios.find(u => u.ci === ciIngresado && u.rol === rolSeleccionado);
-                        Swal.close();
-
-                        if (!usuarioDestino) {
-                            const respuestaError = await configuracionColumnasView.notificarUsuarioNoEncontrado(ciIngresado, rolSeleccionado);
-                            // respuestaError es true si el usuario decide "Intentar de nuevo" (cancelar el aviso de error)
-                            if (respuestaError) { 
-                                paso = 2; continue; 
-                            } else {
-                                // El usuario eligió "Configurar Rol Completo"
-                                ciIngresado = "";
-                                usuarioDestino = null;
-                            }
-                        } else {
+                    if (ciSeleccionado !== "") {
+                        usuarioDestino = usuariosFiltrados.find(u => String(u.ci) === String(ciSeleccionado));
+                        if (usuarioDestino) {
                             nombreVisualDestino = `${usuarioDestino.apellido_paterno} ${usuarioDestino.nombres} (${usuarioDestino.ci})`;
                         }
                     }
                     paso = 3;
+                    continue;
                 }
 
-                // --- PASO 3: CONFIGURAR COLUMNAS ---
+                // --- PASO 3: CONFIGURAR VISIBILIDAD ---
                 if (paso === 3) {
-                    const actuales = await configuracionColumnasModel.obtenerConfiguracion(
-                        tablaNombre, 
-                        usuarioDestino ? usuarioDestino.id : null, 
-                        !usuarioDestino ? rolSeleccionado : null
-                    ) || todasLasColumnas;
+                    const uId = usuarioDestino ? usuarioDestino.id : null;
+                    const rId = !usuarioDestino ? rolSeleccionado : null;
 
+                    configuracionColumnasView.mostrarCargando('Cargando preferencias...');
+                    const actuales = await configuracionColumnasModel.obtenerConfiguracion(tablaNombre, uId, rId);
+                    Swal.close();
+
+                    // Determinamos qué columnas marcar (las guardadas o todas por defecto)
+                    const columnasAMarcar = actuales && actuales.length > 0 ? actuales : todasLasColumnas;
+
+                    // ÚNICA LLAMADA: Aquí estaba el error (estaba duplicado en tu código)
                     seleccionadas = await configuracionColumnasView.solicitarConfiguracionColumnas(
-                        todasLasColumnas, 
-                        actuales, 
+                        todasLasColumnas,
+                        columnasAMarcar,
                         nombreVisualDestino
                     );
 
-                    if (seleccionadas === 'BACK') { paso = 2; continue; }
+                    if (seleccionadas === 'BACK') {
+                        paso = 2;
+                        continue;
+                    }
                     if (!seleccionadas) return;
+
                     paso = 4;
+                    continue;
                 }
 
-                // --- PASO 4: CONFIRMACIÓN FINAL ---
+                // --- PASO 4: PERSISTENCIA ---
                 if (paso === 4) {
-                    const estaConfirmado = await configuracionColumnasView.confirmarGuardadoFinal(nombreVisualDestino);
+                    const confirmado = await configuracionColumnasView.confirmarGuardadoFinal(nombreVisualDestino);
 
-                    if (estaConfirmado === 'BACK') { paso = 3; continue; }
-                    if (!estaConfirmado) return;
+                    if (confirmado === 'BACK') {
+                        paso = 3;
+                        continue;
+                    }
+                    if (!confirmado) return;
 
-                    // Proceso de guardado real
-                    configuracionColumnasView.mostrarCargando('Guardando configuración...');
-                    
-                    const res = await configuracionColumnasModel.guardarConfiguracion({
+                    configuracionColumnasView.mostrarCargando('Guardando preferencias...');
+
+                    const payload = {
                         tabla_nombre: tablaNombre,
                         columnas_visibles: seleccionadas,
                         usuario_id: usuarioDestino ? usuarioDestino.id : null,
                         rol_id: !usuarioDestino ? rolSeleccionado : null
-                    });
+                    };
+
+                    const res = await configuracionColumnasModel.guardarConfiguracion(payload);
 
                     if (res.exito) {
-                        configuracionColumnasView.notificarExito('Permisos actualizados correctamente');
+                        configuracionColumnasView.notificarExito('Configuración guardada correctamente');
                         if (callbackRecargar) callbackRecargar(seleccionadas);
-                        break; // Finaliza el bucle con éxito
+                        break; // Finaliza el flujo
                     } else {
                         configuracionColumnasView.notificarError(res.mensaje);
-                        return;
+                        paso = 3;
+                        continue;
                     }
                 }
             }
-
         } catch (error) {
-            console.error("Error en configuracionColumnasController:", error);
-            configuracionColumnasView.notificarError('No se pudo cargar el flujo de configuración');
+            console.error("Error crítico en el flujo:", error);
+            configuracionColumnasView.notificarError('Error inesperado al procesar la configuración.');
         }
     }
 };
