@@ -7,6 +7,7 @@ import { productManager } from '../modals/createProduct.js';
 import { supabase } from '../config/supabaseClient.js';
 import { configuracionColumnasController } from '../controllers/configuracionColumnasController.js';
 import { detallesProductoView } from '../views/detallesProductoView.js';
+import { deleteProductoView } from '../views/deleteProductoView.js';
 
 export const productoController = {
 
@@ -352,18 +353,61 @@ export const productoController = {
     },
     async eliminar(id) {
         try {
-            const confirmar = await productoView.confirmarAccion?.('¿Eliminar producto?', 'Esta acción no se puede deshacer.');
-            if (!confirmar) return;
+            productoView.mostrarCargando?.('Obteniendo información del producto...');
 
-            productoView.mostrarCargando?.('Eliminando...');
-            const resultado = await productoModel.eliminar(id);
+            // 1. Obtener los datos del producto para mostrar en la confirmación
+            const [producto, idsCategorias, todasLasCategorias] = await Promise.all([
+                productoModel.obtenerPorId(id),
+                productoCategoriaModel.obtenerCategoriasPorProducto(id),
+                categoriasModel.obtenerTodas()
+            ]);
 
-            if (resultado.exito) {
-                await this.refrescarVista();
-                productoView.notificarExito?.('El producto ha sido eliminado.');
-            } else { throw new Error(resultado.mensaje); }
+            if (!producto) throw new Error('No se encontró el producto.');
+
+            // 2. Enriquecer categorías para la vista resumida
+            const categoriasEnriquecidas = idsCategorias.map(idVinculado => {
+                const catInfo = todasLasCategorias.find(c => c.id === idVinculado);
+                return catInfo ? catInfo : { nombre: 'Categoría ' + idVinculado };
+            });
+
+            // 3. Renderizar la vista de eliminación en el contenedor principal o un modal
+            const contenedorPrincipal = document.getElementById('content-area');
+
+            // Cerramos cualquier alerta de carga previa
+            Swal.close();
+
+            contenedorPrincipal.innerHTML = deleteProductoView.render({
+                producto: producto,
+                categorias: categoriasEnriquecidas
+            });
+
+            // 4. Inicializar los eventos de los botones (Confirmar / Cancelar)
+            deleteProductoView.initEventListeners(
+                // Acción si confirma:
+                async () => {
+                    try {
+                        productoView.mostrarCargando?.('Eliminando permanentemente...');
+                        const resultado = await productoModel.eliminar(id);
+
+                        if (resultado.exito) {
+                            await this.refrescarVista();
+                            productoView.notificarExito?.('El producto ha sido eliminado correctamente.');
+                        } else {
+                            throw new Error(resultado.mensaje);
+                        }
+                    } catch (err) {
+                        productoView.notificarError?.(err.message || 'Error al eliminar.');
+                    }
+                },
+                // Acción si cancela:
+                () => {
+                    this.refrescarVista(); // Simplemente regresa al listado
+                }
+            );
+
         } catch (error) {
-            productoView.notificarError?.(error.message || 'Error al eliminar.');
+            console.error("Error al preparar eliminación:", error);
+            productoView.notificarError?.('No se pudo cargar la confirmación de eliminación.');
         }
     }
 };

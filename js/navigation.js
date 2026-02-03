@@ -1,5 +1,6 @@
 import { categoriasController } from './controllers/categoriasController.js';
 import { productoController } from './controllers/productoController.js';
+import { importacionController } from './controllers/importacionController.js'; // <-- NUEVA IMPORTACIÓN
 
 /**
  * Navigation Controller - Nexus Admin Suite
@@ -10,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- EXPOSICIÓN GLOBAL PARA EVENTOS ONCLICK ---
     window.categoriasController = categoriasController;
     window.productoController = productoController;
+    window.importacionController = importacionController; // <-- EXPOSICIÓN GLOBAL
 
     const navItems = document.querySelectorAll('.nav-item');
     const contentArea = document.getElementById('content-area');
@@ -35,6 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
             /* Ajuste de textos */
             .dark .text-slate-800, .dark .text-gray-800 { color: #f1f5f9 !important; }
             .dark .text-slate-500, .dark .text-gray-500 { color: #94a3b8 !important; }
+            
+            /* Animación de entrada */
+            .animate-fade-in {
+                animation: fadeIn 0.3s ease-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(5px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
         `;
         document.head.appendChild(style);
     };
@@ -159,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- EVENTOS ESPECÍFICOS PARA CATEGORÍAS ---
+    // --- EVENTOS ESPECÍFICOS PARA CATEGORÍAS Y PRODUCTOS ---
     
     document.getElementById('link-categorias-datos')?.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -174,6 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
         mostrarLoading('Cargando Subcategorías');
         await categoriasController.inicializar('subcategorias');
         Swal.close();
+        actualizarEstadoActivo(e.currentTarget);
+    });
+
+    // --- EVENTO PARA CARGA MASIVA (IMPORTACIÓN) ---
+    // Este listener busca el botón por su texto o puedes añadirle un ID 'btn-carga-masiva' en el HTML
+    document.querySelector('button[onclick*="importacionController"]')?.addEventListener('click', async (e) => {
         actualizarEstadoActivo(e.currentTarget);
     });
 
@@ -214,15 +231,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function actualizarEstadoActivo(elementoActivo) {
         if (!elementoActivo) return;
-        const todosLosLinks = document.querySelectorAll('.nav-item, [id^="link-"]');
+        const todosLosLinks = document.querySelectorAll('.nav-item, [id^="link-"], button[onclick*="Controller"]');
         
         todosLosLinks.forEach(i => {
             i.classList.remove('bg-blue-50', 'text-blue-600', 'bg-slate-100', 'bg-indigo-50', 'text-indigo-600');
             i.classList.add('text-slate-500');
         });
         
-        const isConfig = elementoActivo.id === 'link-config-cliente';
-        const esSubmenu = elementoActivo.id?.includes('link');
+        const id = elementoActivo.id || '';
+        const isConfig = id === 'link-config-cliente';
+        const esSubmenu = id.includes('link') || elementoActivo.tagName === 'BUTTON';
         
         if (isConfig) {
             elementoActivo.classList.add('bg-indigo-50', 'text-indigo-600');

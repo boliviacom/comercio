@@ -6,6 +6,7 @@
 
 // CORRECCIÓN DE RUTA: Subimos un nivel para encontrar la carpeta modals
 import { productManager } from '../modals/createProduct.js';
+import { PaginationHelper } from '../utils/paginationHelper.js';
 
 export const productoView = {
     _estado: {
@@ -389,18 +390,18 @@ export const productoView = {
         }
     },
     confirmarEliminacion(dataEncoded) {
-        const p = JSON.parse(decodeURIComponent(escape(atob(dataEncoded))));
-        Swal.fire({
-            title: '<span class="text-red-600 font-black uppercase text-sm">¿Eliminar Producto?</span>',
-            text: `¿Confirma que desea eliminar ${p.nombre.toUpperCase()}?`,
-            icon: 'warning',
-            showCancelButton: true,
-            reverseButtons: true,
-            confirmButtonText: 'SÍ, ELIMINAR',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#dc2626',
-            customClass: { popup: 'rounded-[32px]' }
-        }).then((res) => { if (res.isConfirmed) productoController.eliminar(p.id); });
+        try {
+            // Decodificamos los datos para obtener el ID
+            const p = JSON.parse(decodeURIComponent(escape(atob(dataEncoded))));
+
+            // En lugar de mostrar el SweetAlert aquí, 
+            // delegamos la responsabilidad al controlador para que use la nueva vista.
+            productoController.eliminar(p.id);
+
+        } catch (error) {
+            console.error("Error al procesar datos para eliminación:", error);
+            this.notificarError('No se pudo procesar la solicitud de eliminación.');
+        }
     },
 
     limpiarBusquedaRapida() {
@@ -473,26 +474,12 @@ export const productoView = {
     },
 
     _generarPaginacion(total) {
-        const totalPaginas = Math.ceil(total / this._estado.filasPorPagina) || 1;
-        return `
-            <div class="px-6 py-4 bg-slate-50/50 flex items-center justify-between border-t border-slate-100">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Total: ${total} Productos</p>
-                <div class="flex gap-2">
-                    <button onclick="productoView.cambiarPagina(${this._estado.paginaActual - 1})" 
-                            ${this._estado.paginaActual === 1 ? 'disabled' : ''} 
-                            class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 disabled:opacity-30">
-                        <span class="material-symbols-outlined text-sm">chevron_left</span>
-                    </button>
-                    <div class="px-3 flex items-center bg-white border border-slate-200 rounded-lg text-[10px] font-black">
-                        ${this._estado.paginaActual} / ${totalPaginas}
-                    </div>
-                    <button onclick="productoView.cambiarPagina(${this._estado.paginaActual + 1})" 
-                            ${this._estado.paginaActual >= totalPaginas ? 'disabled' : ''} 
-                            class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 disabled:opacity-30">
-                        <span class="material-symbols-outlined text-sm">chevron_right</span>
-                    </button>
-                </div>
-            </div>`;
+        return PaginationHelper.render(
+            total,
+            this._estado.filasPorPagina,
+            this._estado.paginaActual,
+            'productoView'
+        );
     },
 
     // --- ACCIONES DIRECTAS ---
