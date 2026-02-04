@@ -49,7 +49,7 @@ export const categoriasModel = {
                 .single();
 
             if (error) throw error;
-            
+
             return {
                 ...data,
                 nombre_padre: data.categoria_padre ? data.categoria_padre.nombre : 'Ninguna (Es Principal)'
@@ -124,10 +124,34 @@ export const categoriasModel = {
             return { exito: true, data: data[0] };
         } catch (err) {
             console.error('Error en Soft Delete:', err.message);
-            return { 
-                exito: false, 
-                mensaje: "No se pudo ocultar el registro: " + err.message 
+            return {
+                exito: false,
+                mensaje: "No se pudo ocultar el registro: " + err.message
             };
+        }
+    },
+    /**
+     * Busca categorías activas por nombre
+     */
+    async buscarPorNombre(termino) {
+        try {
+            const { data, error } = await supabase
+                .from('categoria')
+                .select('id, nombre, imagen') // Asegúrate de que 'imagen' exista en la tabla
+                .ilike('nombre', `%${termino}%`)
+                .eq('visible', true)
+                .limit(10);
+
+            if (error) throw error;
+
+            return data.map(c => ({
+                id: c.id,
+                nombre: c.nombre,
+                imagen: c.imagen || 'https://placehold.co/100?text=Cat' // Fallback si no hay imagen
+            }));
+        } catch (err) {
+            console.error('Error buscando categorías:', err.message);
+            return [];
         }
     }
 };

@@ -156,8 +156,27 @@
                         <span class="material-symbols-outlined text-[20px]">palette</span>
                         <p class="text-sm font-medium sidebar-hide">Página Cliente</p>
                     </a>
-                </div>
+                    <details class="group px-1">
+                        <summary
+                            class="flex items-center justify-between rounded-lg px-3 py-2.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer list-none">
+                            <div onclick="event.preventDefault(); carruselController.inicializar()"
+                                class="flex items-center gap-3 flex-1">
+                                <span class="material-symbols-outlined text-[20px]">view_carousel</span>
+                                <p class="text-sm font-medium sidebar-hide">Carruseles</p>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-[18px] transition-transform group-open:rotate-180 sidebar-hide">expand_more</span>
+                        </summary>
 
+                        <div class="flex flex-col gap-1 mt-1 ml-4 pl-4 border-l-2 border-slate-100 sidebar-hide">
+                            <button onclick="RegisterCarrusel.start('tu-contenedor-id')"
+                                class="flex items-center gap-3 rounded-lg px-3 py-1.5 text-slate-400 hover:text-blue-500 transition-all text-[10px] font-bold uppercase">
+                                <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                Nuevo Carrusel
+                            </button>
+                        </div>
+                    </details>
+                </div>
 
                 <div class="p-4 flex flex-col gap-4 border-t border-slate-100 bg-slate-50/50">
 
@@ -212,6 +231,7 @@
     <script type="module" src="js/navigation.js"></script>
     <script type="module" src="js/controllers/categoriasController.js"></script>
     <script type="module" src="js/controllers/productoController.js"></script>
+    <script type="module" src="js/controllers/carruselController.js"></script>
 </body>
 
 </html>

@@ -1,17 +1,17 @@
 import { categoriasController } from './controllers/categoriasController.js';
 import { productoController } from './controllers/productoController.js';
-import { importacionController } from './controllers/importacionController.js'; // <-- NUEVA IMPORTACIÓN
+import { importacionController } from './controllers/importacionController.js';
 
 /**
  * Navigation Controller - Nexus Admin Suite
  * Integra carga de IFRAMEs, AJAX, MVC y UI de Sidebar
  */
 document.addEventListener('DOMContentLoaded', () => {
-    
+
     // --- EXPOSICIÓN GLOBAL PARA EVENTOS ONCLICK ---
     window.categoriasController = categoriasController;
     window.productoController = productoController;
-    window.importacionController = importacionController; // <-- EXPOSICIÓN GLOBAL
+    window.importacionController = importacionController;
 
     const navItems = document.querySelectorAll('.nav-item');
     const contentArea = document.getElementById('content-area');
@@ -22,46 +22,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = document.createElement('style');
         style.id = 'nexus-dynamic-styles';
         style.innerHTML = `
-            /* Transiciones suaves */
             * { transition: background-color 0.2s ease, border-color 0.2s ease; }
-
-            /* Sobrescritura global para modo oscuro basada en tu tailwindConfig */
             .dark body { background-color: #101922 !important; color: #f1f5f9; }
             .dark #main-sidebar { background-color: #101922 !important; border-right-color: #1e293b; }
             .dark header { background-color: #101922 !important; border-bottom-color: #1e293b; }
-            
-            /* Ajuste de tarjetas y contenedores blancos */
             .dark .bg-white { background-color: #16222e !important; color: #f1f5f9 !important; }
             .dark .border-slate-200, .dark .border-gray-200 { border-color: #1e293b !important; }
-            
-            /* Ajuste de textos */
             .dark .text-slate-800, .dark .text-gray-800 { color: #f1f5f9 !important; }
             .dark .text-slate-500, .dark .text-gray-500 { color: #94a3b8 !important; }
-            
-            /* Animación de entrada */
-            .animate-fade-in {
-                animation: fadeIn 0.3s ease-out;
-            }
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(5px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
+            .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         `;
         document.head.appendChild(style);
     };
-
     inyectarEstilosGlobales();
 
     // --- LÓGICA DE UI: SIDEBAR ---
-
     window.sidebarController = {
         toggle() {
             const sidebar = document.getElementById('main-sidebar');
             const icon = document.getElementById('sidebar-icon');
             const logoImg = document.getElementById('sidebar-logo');
-            
             const isColapsed = sidebar.classList.toggle('w-[80px]');
-            
+
             if (isColapsed) {
                 sidebar.classList.remove('w-[280px]');
                 icon.innerText = 'chevron_right';
@@ -83,24 +66,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- LÓGICA DE MODO OSCURO ---
-
     window.themeController = {
         toggle() {
             const root = document.documentElement;
             const cursor = document.getElementById('theme-cursor');
             const bg = document.getElementById('theme-switch');
-            
             const isDark = root.classList.toggle('dark');
-            
+
             if (cursor && bg) {
                 cursor.style.transform = isDark ? 'translateX(20px)' : 'translateX(0px)';
                 bg.classList.toggle('bg-blue-600', isDark);
                 bg.classList.toggle('bg-slate-200', !isDark);
             }
-
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
-            // Sincronizar IFRAME
             const iframe = contentArea.querySelector('iframe');
             if (iframe && iframe.contentDocument) {
                 iframe.contentDocument.documentElement.classList.toggle('dark', isDark);
@@ -110,9 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const inicializarTema = () => {
         const temaGuardado = localStorage.getItem('theme');
-        const root = document.documentElement;
         if (temaGuardado === 'dark') {
-            root.classList.add('dark');
+            document.documentElement.classList.add('dark');
             const cursor = document.getElementById('theme-cursor');
             const bg = document.getElementById('theme-switch');
             if (cursor && bg) {
@@ -122,34 +99,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-
     inicializarTema();
 
     // --- LÓGICA DE CARGA DE CONTENIDO ---
-
     async function cargarSeccion(url, type, elemento) {
         if (!url) return;
-        
         mostrarLoading('Cargando sección');
         actualizarEstadoActivo(elemento);
 
         if (type === 'iframe') {
-            contentArea.innerHTML = ''; 
+            contentArea.innerHTML = '';
             const iframe = document.createElement('iframe');
             iframe.src = url;
             iframe.className = "w-full h-full border-none bg-transparent opacity-0 transition-opacity duration-300";
-            
             iframe.onload = () => {
-                const isDark = document.documentElement.classList.contains('dark');
-                // Sincronizar modo oscuro con el contenido del iframe
                 if (iframe.contentDocument) {
+                    const isDark = document.documentElement.classList.contains('dark');
                     iframe.contentDocument.documentElement.classList.toggle('dark', isDark);
-                    // Inyectar los mismos estilos automáticos dentro del iframe
                     const styleClone = document.createElement('style');
                     styleClone.innerHTML = document.getElementById('nexus-dynamic-styles').innerHTML;
                     iframe.contentDocument.head.appendChild(styleClone);
                 }
-                
                 iframe.classList.remove('opacity-0');
                 Swal.close();
             };
@@ -159,8 +129,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- EVENTOS DE NAVEGACIÓN ---
+    // --- NAVEGACIÓN UNIFICADA (DELEGACIÓN DE EVENTOS) ---
+    // Escuchamos clics en todo el sidebar para atrapar los 'onclick' del HTML
+    document.getElementById('main-sidebar')?.addEventListener('click', (e) => {
+        const item = e.target.closest('.nav-item, [id^="link-"], button, summary');
+        if (!item) return;
 
+        // Si es un summary con un div adentro (tus categorías/productos)
+        const clickableDiv = item.querySelector('div[onclick]');
+        
+        // Ejecutamos la limpieza visual
+        actualizarEstadoActivo(item);
+    });
+
+    // Eventos para nav-items estándar
     navItems.forEach(item => {
         item.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -170,32 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- EVENTOS ESPECÍFICOS PARA CATEGORÍAS Y PRODUCTOS ---
-    
-    document.getElementById('link-categorias-datos')?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        mostrarLoading('Cargando Categorías');
-        await categoriasController.inicializar('categorias');
-        Swal.close();
-        actualizarEstadoActivo(e.currentTarget);
-    });
-
-    document.getElementById('link-subcategorias-datos')?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        mostrarLoading('Cargando Subcategorías');
-        await categoriasController.inicializar('subcategorias');
-        Swal.close();
-        actualizarEstadoActivo(e.currentTarget);
-    });
-
-    // --- EVENTO PARA CARGA MASIVA (IMPORTACIÓN) ---
-    // Este listener busca el botón por su texto o puedes añadirle un ID 'btn-carga-masiva' en el HTML
-    document.querySelector('button[onclick*="importacionController"]')?.addEventListener('click', async (e) => {
-        actualizarEstadoActivo(e.currentTarget);
-    });
-
-    // --- FUNCIONES DE APOYO (HELPERS) ---
-
+    // --- HELPERS ---
     async function cargarPaginaAjax(url, elemento) {
         try {
             const response = await fetch(url);
@@ -220,35 +177,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function mostrarError(url) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error al cargar',
-            text: `No se pudo encontrar la ruta: ${url}`,
-            confirmButtonColor: '#3b82f6'
-        });
+        Swal.fire({ icon: 'error', title: 'Error al cargar', text: `No se encontró la ruta: ${url}` });
         contentArea.innerHTML = `<div class="flex items-center justify-center h-full text-slate-400">Error al cargar ${url}</div>`;
     }
 
     function actualizarEstadoActivo(elementoActivo) {
         if (!elementoActivo) return;
-        const todosLosLinks = document.querySelectorAll('.nav-item, [id^="link-"], button[onclick*="Controller"]');
-        
+
+        // 1. Limpieza de TODOS los elementos
+        const todosLosLinks = document.querySelectorAll('.nav-item, [id^="link-"], details button, summary');
         todosLosLinks.forEach(i => {
-            i.classList.remove('bg-blue-50', 'text-blue-600', 'bg-slate-100', 'bg-indigo-50', 'text-indigo-600');
+            i.classList.remove(
+                'bg-blue-50', 'text-blue-600',
+                'bg-indigo-50', 'text-indigo-600',
+                'bg-orange-50', 'text-orange-600',
+                'bg-emerald-50', 'text-emerald-600',
+                'bg-slate-100'
+            );
             i.classList.add('text-slate-500');
+            // Si el summary tiene un p interno, también lo limpiamos
+            const p = i.querySelector('p');
+            if(p) p.classList.remove('text-blue-600');
         });
-        
+
+        // 2. Aplicación de estado activo
+        elementoActivo.classList.remove('text-slate-500', 'text-slate-400');
         const id = elementoActivo.id || '';
-        const isConfig = id === 'link-config-cliente';
-        const esSubmenu = id.includes('link') || elementoActivo.tagName === 'BUTTON';
-        
-        if (isConfig) {
+        const texto = elementoActivo.innerText.toLowerCase();
+
+        if (id === 'link-config-cliente') {
             elementoActivo.classList.add('bg-indigo-50', 'text-indigo-600');
-        } else if (esSubmenu) {
-            elementoActivo.classList.add('bg-slate-100', 'text-blue-600');
+        } else if (texto.includes('carga masiva')) {
+            elementoActivo.classList.add('bg-orange-50', 'text-orange-600');
+        } else if (texto.includes('nueva subcategoría')) {
+            elementoActivo.classList.add('bg-emerald-50', 'text-emerald-600');
         } else {
             elementoActivo.classList.add('bg-blue-50', 'text-blue-600');
         }
-        elementoActivo.classList.remove('text-slate-500');
     }
 });

@@ -1,3 +1,5 @@
+import { PaginationHelper } from '../utils/paginationHelper.js';
+
 export const categoriasView = {
     // Variables de estado local para la vista
     _estado: {
@@ -29,9 +31,9 @@ export const categoriasView = {
             title: '<span class="text-red-600 font-black uppercase text-sm">Error en la Operación</span>',
             text: mensaje,
             confirmButtonColor: '#2563eb',
-            customClass: { 
+            customClass: {
                 popup: 'rounded-[32px] border-none shadow-xl',
-                confirmButton: 'rounded-xl px-6 py-2 font-bold text-xs uppercase' 
+                confirmButton: 'rounded-xl px-6 py-2 font-bold text-xs uppercase'
             }
         });
     },
@@ -119,7 +121,7 @@ export const categoriasView = {
                 </div>
             </div>
         `;
-        
+
         contenedor.innerHTML = html;
 
         if (activeElementId) {
@@ -159,75 +161,65 @@ export const categoriasView = {
         categoriasController.refrescarVista();
     },
 
-    cambiarPagina(tipoPagina, nuevaPagina) {
+    cambiarPagina(nuevaPagina) {
+        const tipoPagina = this._estado.pestanaActiva === 'categorias'
+            ? 'paginaActualCat'
+            : 'paginaActualSub';
+
         this._estado[tipoPagina] = nuevaPagina;
         categoriasController.refrescarVista();
     },
 
     _generarSeccionTabla(tipo, idConfig, idNuevo, datos, columnas, tipoPagina) {
         const totalRegistros = datos.length;
-        const totalPaginas = Math.ceil(totalRegistros / this._estado.filasPorPagina) || 1;
         const inicio = (this._estado[tipoPagina] - 1) * this._estado.filasPorPagina;
         const fin = inicio + this._estado.filasPorPagina;
         const datosPaginados = datos.slice(inicio, fin);
 
+        // Renderizado de la tabla (mantenemos la estructura superior)
         return `
-            <div class="flex justify-between items-center mb-4 px-1">
-                <h2 class="text-xs font-black text-slate-400 uppercase tracking-[0.15em]">Listado de ${tipo} (${totalRegistros})</h2>
-                <div class="flex items-center gap-3">
-                    <button id="${idConfig}" class="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-blue-600 transition-all shadow-sm">
-                        <span class="material-symbols-outlined text-[22px]">view_column</span>
-                    </button>
-                    <button id="${idNuevo}" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-md font-bold text-sm flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">add</span> Nueva
-                    </button>
-                </div>
+        <div class="flex justify-between items-center mb-4 px-1">
+            <h2 class="text-xs font-black text-slate-400 uppercase tracking-[0.15em]">Listado de ${tipo} (${totalRegistros})</h2>
+            <div class="flex items-center gap-3">
+                <button id="${idConfig}" class="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-blue-600 transition-all shadow-sm">
+                    <span class="material-symbols-outlined text-[22px]">view_column</span>
+                </button>
+                <button id="${idNuevo}" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-md font-bold text-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">add</span> Nueva
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-8">
+            <div class="overflow-x-auto"> 
+                <table class="w-full text-left border-collapse table-auto"> 
+                    <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-200">
+                            <th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase w-24 text-center">N°</th>
+                            ${columnas.map(col => {
+            const minWidth = col === 'nombre' ? 'min-w-[250px]' : 'min-w-[200px]';
+            return `<th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase ${minWidth} text-center">${col === 'categoria_padre' ? 'Vinculado a' : col.replace(/_/g, ' ')}</th>`;
+        }).join('')}
+                            <th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase text-center w-52">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${datosPaginados.length > 0
+                ? datosPaginados.map((item, index) => this._crearFila(item, columnas, inicio + index)).join('')
+                : `<tr><td colspan="10" class="px-6 py-12 text-center text-slate-400 italic text-sm">No se encontraron resultados</td></tr>`
+            }
+                    </tbody>
+                </table>
             </div>
 
-            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-8">
-                <div class="overflow-x-auto"> 
-                    <table class="w-full text-left border-collapse table-auto"> 
-                        <thead>
-                            <tr class="bg-slate-50/80 border-b border-slate-200">
-                                <th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase w-24 text-center">N°</th>
-                                ${columnas.map(col => {
-                                    const minWidth = col === 'nombre' ? 'min-w-[250px]' : 'min-w-[200px]';
-                                    return `<th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase ${minWidth} text-center">${col === 'categoria_padre' ? 'Vinculado a' : col.replace(/_/g, ' ')}</th>`;
-                                }).join('')}
-                                <th class="px-6 py-5 text-[11px] font-bold text-slate-400 uppercase text-center w-52">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            ${datosPaginados.length > 0 
-                                ? datosPaginados.map((item, index) => this._crearFila(item, columnas, inicio + index)).join('')
-                                : `<tr><td colspan="10" class="px-6 py-12 text-center text-slate-400 italic text-sm">No se encontraron resultados</td></tr>`
-                            }
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        Mostrando <span class="text-blue-600">${datosPaginados.length}</span> de ${totalRegistros} registros
-                    </p>
-                    <div class="flex gap-2">
-                        <button onclick="categoriasView.cambiarPagina('${tipoPagina}', ${this._estado[tipoPagina] - 1})" 
-                                ${this._estado[tipoPagina] === 1 ? 'disabled' : ''}
-                                class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">
-                            <span class="material-symbols-outlined text-sm">chevron_left</span>
-                        </button>
-                        <div class="flex items-center px-4 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 shadow-sm">
-                            ${this._estado[tipoPagina]} / ${totalPaginas}
-                        </div>
-                        <button onclick="categoriasView.cambiarPagina('${tipoPagina}', ${this._estado[tipoPagina] + 1})" 
-                                ${this._estado[tipoPagina] >= totalPaginas ? 'disabled' : ''}
-                                class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-white transition-all shadow-sm">
-                            <span class="material-symbols-outlined text-sm">chevron_right</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
+            ${PaginationHelper.render(
+                totalRegistros,
+                this._estado.filasPorPagina,
+                this._estado[tipoPagina],
+                'categoriasView'
+            )}
+        </div>
+    `;
     },
 
     _crearFila(item, columnasVisibles, index) {
@@ -300,7 +292,7 @@ export const categoriasView = {
 
     confirmarEliminacion(dataEncoded) {
         const registro = JSON.parse(decodeURIComponent(escape(atob(dataEncoded))));
-        
+
         Swal.fire({
             title: '<span class="text-red-600 font-black uppercase text-sm">¿Confirmar Eliminación?</span>',
             html: `
@@ -430,9 +422,9 @@ export const categoriasView = {
                 const selectPadre = document.getElementById('swal-id-padre');
                 const padreVal = selectPadre ? selectPadre.value : null;
 
-                if (!nombreVal) { 
-                    Swal.showValidationMessage('El nombre es obligatorio'); 
-                    return false; 
+                if (!nombreVal) {
+                    Swal.showValidationMessage('El nombre es obligatorio');
+                    return false;
                 }
 
                 if (esSubcategoria && !padreVal) {

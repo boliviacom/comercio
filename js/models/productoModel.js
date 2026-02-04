@@ -214,5 +214,27 @@ export const productoModel = {
             console.error('Error en Soft Delete:', err.message);
             return { exito: false, mensaje: err.message };
         }
+    },
+    async buscarPorNombre(termino) {
+        try {
+            const { data, error } = await supabase
+                .from('v_productos_detallados')
+                .select('producto_id, producto_nombre, imagen_url')
+                .ilike('producto_nombre', `%${termino}%`)
+                .eq('visible', true)
+                .limit(10);
+
+            if (error) throw error;
+            
+            // Normalizamos la salida para que el buscador la entienda
+            return data.map(p => ({
+                id: p.producto_id,
+                nombre: p.producto_nombre,
+                imagen: p.imagen_url
+            }));
+        } catch (err) {
+            console.error('Error buscando productos:', err.message);
+            return [];
+        }
     }
 };
