@@ -137,10 +137,10 @@ export const carruselModel = {
             const { data, error } = await supabase
                 .from('carrusel_items')
                 .select(`
-                    *,
-                    producto:producto_id (id, nombre, imagen_url, precio),
-                    categoria:categoria_id (id, nombre, imagen) 
-                `)
+                *,
+                producto:producto_id (id, nombre, imagen_url, precio),
+                categoria:categoria_id (id, nombre) 
+            `) // Quitamos "imagen" o "imagen_url" de aquí
                 .eq('carrusel_id', carruselId)
                 .order('orden', { ascending: true });
 
@@ -171,6 +171,15 @@ export const carruselModel = {
             console.error('Error al limpiar ítems previos:', err.message);
             return { exito: false };
         }
+    },
+    async eliminarItemsPorCarrusel(carruselId) {
+        const { error } = await supabase
+            .from('carrusel_items')
+            .delete()
+            .eq('carrusel_id', carruselId);
+
+        if (error) return { exito: false, mensaje: error.message };
+        return { exito: true };
     },
 
     /**

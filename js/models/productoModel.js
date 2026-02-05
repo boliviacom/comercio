@@ -218,19 +218,21 @@ export const productoModel = {
     async buscarPorNombre(termino) {
         try {
             const { data, error } = await supabase
-                .from('v_productos_detallados')
-                .select('producto_id, producto_nombre, imagen_url')
-                .ilike('producto_nombre', `%${termino}%`)
+                .from('producto')
+                .select('id, nombre, imagen_url, precio, visible')
+                .ilike('nombre', `%${termino}%`)
                 .eq('visible', true)
                 .limit(10);
 
             if (error) throw error;
-            
-            // Normalizamos la salida para que el buscador la entienda
+
+            // NORMALIZACIÓN CORREGIDA:
+            // Usamos los nombres reales de las columnas de tu tabla 'producto'
             return data.map(p => ({
-                id: p.producto_id,
-                nombre: p.producto_nombre,
-                imagen: p.imagen_url
+                id: p.id,               // Antes decía p.producto_id (Error)
+                nombre: p.nombre,       // Antes decía p.producto_nombre (Error)
+                imagen: p.imagen_url,   // Correcto
+                precio: p.precio        // ¡Faltaba incluir esto!
             }));
         } catch (err) {
             console.error('Error buscando productos:', err.message);

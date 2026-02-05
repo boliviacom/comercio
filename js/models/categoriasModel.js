@@ -137,7 +137,7 @@ export const categoriasModel = {
         try {
             const { data, error } = await supabase
                 .from('categoria')
-                .select('id, nombre, imagen') // Asegúrate de que 'imagen' exista en la tabla
+                .select('id, nombre') // Solo las columnas que existen
                 .ilike('nombre', `%${termino}%`)
                 .eq('visible', true)
                 .limit(10);
@@ -147,7 +147,8 @@ export const categoriasModel = {
             return data.map(c => ({
                 id: c.id,
                 nombre: c.nombre,
-                imagen: c.imagen || 'https://placehold.co/100?text=Cat' // Fallback si no hay imagen
+                // Como tu tabla no tiene imagen, enviamos un placeholder
+                imagen: 'https://placehold.co/400x400?text=Categoria'
             }));
         } catch (err) {
             console.error('Error buscando categorías:', err.message);
