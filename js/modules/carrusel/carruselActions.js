@@ -15,7 +15,6 @@ async function cargarDiccionarioIconos() {
         const data = await response.json();
         // Filtramos solo los iconos que tienen estilo "solid" (gratuitos)
         ICONOS_GLOBALES = Object.keys(data).filter(key => data[key].styles.includes('solid'));
-        console.log(`Cargados ${ICONOS_GLOBALES.length} iconos de FontAwesome`);
     } catch (error) {
         console.error("Error cargando iconos:", error);
         // Fallback en caso de error
@@ -246,7 +245,6 @@ export const carruselActions = {
      * Actualizado para manejar el precio y mejorar la previsualización.
      */
     async seleccionarResultado(id, nombre, imagen, link, precio) {
-        console.log("1. [Seleccionar] Datos recibidos:", { id, nombre, precio });
 
         // --- NUEVA LÓGICA DE ICONOS ---
         let valorMediaFinal = imagen;
@@ -368,17 +366,7 @@ export const carruselActions = {
         }
     },
 
-    /**
-     * Captura el ítem del formulario según el tipo de carrusel
-     */
-    // En carruselActions.js -> modificar capturarItem
-    /**
-  * Captura los datos del formulario de ítems y los prepara para el State y la DB.
-  * Resuelve el problema de guardado de iconos en imagen_url_manual.
-  */
     capturarItem() {
-        console.log("--- INICIO CAPTURA DE ÍTEM ACTUALIZADO ---");
-
         // 1. Referencias al DOM
         const elMedia = document.getElementById('it_media_url');
         const elTitulo = document.getElementById('it_titulo');
@@ -431,12 +419,6 @@ export const carruselActions = {
             categoria_id: tipoActual === 'categorias' ? (relacionId ? parseInt(relacionId) : null) : null,
         };
 
-        // Cascada de respaldo: Si en tu DB prefieres que los iconos TAMBIÉN se guarden en imagen_url_manual
-        // descomenta la siguiente línea:
-        // if (mediaUrl.startsWith('fa-')) itemFinal.imagen_url_manual = mediaUrl;
-
-        // 4. Preservación de ID para Edición
-        // Si estamos editando un ítem que ya existe en la DB, debemos mantener su ID
         if (carruselState._editingItemIdx !== null) {
             const listaItems = Array.isArray(carruselState.items) ? carruselState.items : (carruselState.items.items || []);
             const itemOriginal = listaItems[carruselState._editingItemIdx];
@@ -445,8 +427,6 @@ export const carruselActions = {
                 itemFinal.id = itemOriginal.id;
             }
         }
-
-        console.log("3. [Objeto Final] Sincronizado para enviar:", itemFinal);
         return itemFinal;
     },
     /**
@@ -605,7 +585,6 @@ export const carruselActions = {
     },
 
     seleccionarIcono(nombreIcono) {
-        console.log("Icono seleccionado:", nombreIcono);
         const inputMedia = document.getElementById('it_media_url');
 
         if (inputMedia) {
@@ -628,42 +607,38 @@ export const carruselActions = {
      */
     async enviarAlServidor() {
         const state = window.carruselState;
-        const listaItems = Array.isArray(state.items) ? state.items : (state.items.items || []);
+        // Aseguramos obtener la lista de ítems correctamente
+        const listaItems = Array.isArray(state.items) ? state.items : (state.items?.items || []);
 
         if (!state || listaItems.length === 0) {
-            carruselActions._alertError("No hay ítems para guardar");
+            Swal.fire({
+                title: "Lista vacía",
+                text: "Agrega al menos un ítem antes de publicar.",
+                icon: "warning",
+                customClass: { popup: 'rounded-[2rem]' }
+            });
             return;
         }
 
+        // Usamos el nombre del estado para la confirmación
+        const nombreCarrusel = state.config.nombre || "nuevo carrusel";
+
         const result = await Swal.fire({
-            title: '¿Guardar Cambios?',
-            text: "Los cambios se aplicarán inmediatamente en la web",
+            title: `¿Publicar "${nombreCarrusel}"?`,
+            text: "La configuración y los ítems se actualizarán en la base de datos.",
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Sí, guardar',
+            confirmButtonText: 'Sí, publicar ahora',
+            cancelButtonText: 'Cancelar',
             confirmButtonColor: '#2563eb',
-            cancelButtonColor: '#64748b',
             customClass: { popup: 'rounded-[2rem]' }
         });
 
         if (!result.isConfirmed) return;
 
-        // --- DEPURACIÓN: REVISAR ESTADO ANTES DE ENVIAR ---
-        console.group("🔍 DEPURACIÓN PRE-ENVÍO");
-        console.log("Estado actual de ítems:", listaItems);
-        console.table(listaItems.map((it, idx) => ({
-            index: idx,
-            titulo: it.titulo_manual || it.titulo,
-            preview: it.imagen_preview,
-            es_icono: it.imagen_preview?.startsWith('fa-'),
-            col_icono: it.icono_manual,
-            col_imagen: it.imagen_url_manual
-        })));
-        console.groupEnd();
-
         Swal.fire({
-            title: 'Procesando...',
-            html: 'Guardando configuración e ítems...',
+            title: 'Guardando...',
+            html: 'Sincronizando con el servidor',
             didOpen: () => { Swal.showLoading(); },
             allowOutsideClick: false,
             customClass: { popup: 'rounded-[2rem]' }
@@ -671,59 +646,71 @@ export const carruselActions = {
 
         try {
             const ctrl = window.carruselController;
-            if (!ctrl) throw new Error("Controlador no disponible");
+            if (!ctrl) throw new Error("El controlador no está inicializado");
 
+            // 1. Guardar o Actualizar la CABECERA
+            // Usamos state._id para saber si es edición o creación
             const resConfig = await ctrl.guardarConfiguracion(state.config, state._id);
-            if (!resConfig.exito) throw new Error("Error al guardar configuración: " + resConfig.mensaje);
+            if (!resConfig.exito) throw new Error(resConfig.mensaje);
 
             const carruselId = resConfig.id;
 
-            console.log("🚀 Iniciando vinculación de ítems para Carrusel ID:", carruselId);
+            // 2. Limpiar ítems antiguos para evitar duplicados
             await ctrl.limpiarItemsCarrusel(carruselId);
 
-            for (const [index, item] of listaItems.entries()) {
-
-                // Construcción del payload con logs individuales
-                const esIcono = item.imagen_preview?.startsWith('fa-') || item.icono_manual;
+            // 3. Vincular los nuevos ítems uno a uno
+            for (let i = 0; i < listaItems.length; i++) {
+                const item = listaItems[i];
+                const medioVisual = item.imagen_preview || item.imagen_url_manual || item.icono_manual || null;
 
                 const payload = {
                     carrusel_id: carruselId,
-                    orden: index,
-                    titulo_manual: item.titulo_manual || item.titulo,
-                    subtitulo_manual: item.subtitulo_manual || item.subtitulo,
-                    // Si el item.icono_manual viene vacío, lo rescatamos del preview aquí mismo
-                    imagen_url_manual: item.imagen_url_manual || (item.imagen_preview?.startsWith('fa-') ? null : item.imagen_preview),
-                    icono_manual: item.icono_manual || (item.imagen_preview?.startsWith('fa-') ? item.imagen_preview : null),
-                    link_destino_manual: item.link_destino_manual || item.link,
-                    producto_id: item.producto_id,
-                    categoria_id: item.categoria_id,
-                    activo: true
+                    orden: i,
+                    titulo_manual: item.titulo_manual || item.titulo || null,
+                    subtitulo_manual: item.subtitulo_manual || item.subtitulo || null,
+                    imagen_url_manual: medioVisual,
+                    link_destino_manual: item.link_destino_manual || item.link || null,
+                    producto_id: item.producto_id || null,
+                    categoria_id: item.categoria_id || null
                 };
 
-                console.log(`📤 Enviando Ítem [${index}]:`, {
-                    Icono: payload.icono_manual,
-                    Imagen: payload.imagen_url_manual
-                });
-
-                await ctrl.vincularItemSinRefrescar(payload);
+                const resItem = await ctrl.vincularItemSinRefrescar(payload);
+                if (resItem && resItem.exito === false) {
+                    throw new Error(`Error en ítem ${i}: ${resItem.mensaje}`);
+                }
             }
 
+            // 4. Feedback de éxito con cierre automático
             await Swal.fire({
                 icon: 'success',
-                title: '¡Publicado!',
-                text: 'El carrusel se ha actualizado correctamente',
-                showConfirmButton: false,
+                title: '¡Publicado con éxito!',
+                text: `El carrusel "${nombreCarrusel}" ha sido actualizado.`,
                 timer: 2000,
+                showConfirmButton: false,
                 customClass: { popup: 'rounded-[2rem]' }
             });
 
-            if (window.RegisterCarrusel) {
-                RegisterCarrusel.cerrarYRefrescar();
+            // 5. FINALIZACIÓN Y REFRESCO DE TABLA
+            // Llamamos al render de la vista antes de cerrar para que los datos estén listos
+            if (window.carruselController_View) {
+                window.carruselController_View.render();
+            }
+
+            if (window.RegisterCarrusel && typeof window.RegisterCarrusel.cerrarYRefrescar === 'function') {
+                window.RegisterCarrusel.cerrarYRefrescar();
+            } else {
+                // Si el componente de registro no tiene el método, forzamos recarga como último recurso
+                location.reload();
             }
 
         } catch (error) {
-            console.error("❌ Error crítico en envío:", error);
-            carruselActions._alertError("Error al guardar: " + error.message);
+            console.error("Error crítico en el guardado:", error);
+            Swal.fire({
+                title: "Fallo en el guardado",
+                text: "Detalle: " + error.message,
+                icon: "error",
+                customClass: { popup: 'rounded-[2rem]' }
+            });
         }
     }
 };

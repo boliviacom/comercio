@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-
-<html class="light" lang="en">
+<html class="light" lang="es">
 
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Owner Login Portal Geek</title>
+    <title>Portal Administrativo - Geek</title>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
@@ -13,33 +12,23 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#39efbb", // Bright Mint/Teal from theme
-                        "brand-teal": "#2E5E55", // Deep Teal from request
-                        "brand-mint": "#5EC8AA", // Muted Mint from request
-                        "background-light": "#f8fcfb",
-                        "background-dark": "#10221d",
-                        "text-dark": "#0d1b17",
-                        "text-mid": "#4c9a84",
+                        "brand-dark": "#162925",    // Verde oscuro profundo
+                        "brand-primary": "#53B59D", // Verde vibrante del logo
+                        "brand-light": "#A8D5C8",   // Verde pálido para acentos suaves
+                        "geek-black": "#1F2937",    // Texto principal oscuro
                     },
                     fontFamily: {
                         "display": ["Inter", "sans-serif"],
                         "sans": ["Inter", "sans-serif"],
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
                     },
                 },
             },
@@ -47,142 +36,108 @@
     </script>
 </head>
 
-<body class="font-display bg-background-light text-text-dark antialiased">
+<body class="font-display bg-white text-geek-black antialiased">
     <div class="flex min-h-screen w-full flex-row overflow-hidden">
-        <!-- Left Side: Branding & Visuals -->
-        <!-- Hidden on small screens, flex-1 on larger screens -->
-        <div class="relative hidden w-0 flex-1 flex-col justify-between bg-brand-teal p-12 lg:flex xl:w-1/2">
-            <!-- Decorative Background Pattern -->
-            <div class="absolute inset-0 z-0 opacity-10" data-alt="Abstract geometric teal pattern"
-                style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%235EC8AA\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
+
+        <div class="relative hidden w-0 flex-1 flex-col justify-between bg-brand-dark p-12 lg:flex xl:w-1/2">
+            <div class="absolute inset-0 z-0 opacity-10"
+                style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%2353B59D\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
             </div>
-            <!-- Gradient Overlay for depth -->
-            <div class="absolute inset-0 z-0 bg-gradient-to-br from-brand-teal/80 to-[#1a3832]/90"></div>
-            <!-- Branding Top Left -->
-            <div class="relative z-10 flex items-center gap-2">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-mint/20 backdrop-blur-sm">
-                    <span class="material-symbols-outlined text-brand-mint">shield_lock</span>
+
+            <div class="absolute inset-0 z-0 bg-gradient-to-br from-brand-dark/90 to-black/20"></div>
+
+            <div class="relative z-10 flex items-center gap-3">
+                <div
+                    class="flex h-[100px] w-[200px] items-center justify-center rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 p-4">
+                    <img src="images/logo_blanco.png" alt="Logo" class="h-full w-full object-contain">
                 </div>
-                <span class="text-xl font-bold tracking-wide text-white">SecureGuard</span>
             </div>
-            <!-- Hero Content Centered Left -->
+
             <div class="relative z-10 my-auto max-w-md">
                 <h1 class="mb-6 text-4xl font-bold leading-tight tracking-tight text-white lg:text-5xl">
-                    Manage your <span class="text-brand-mint">dashboard</span> with ease.
+                    Owner <br />
+                    <span class="text-brand-primary italic font-light">Administración Total</span>
                 </h1>
-                <p class="text-lg leading-relaxed text-brand-mint/80">
-                    Secure, fast, and reliable access to your administrative tools. Monitor performance and manage users
-                    in real-time.
+                <p class="text-lg leading-relaxed text-brand-light">
+                    Plataforma de alta seguridad diseñada para la gestión integral de datos. Monitoreo y
+                    administración centralizada.
                 </p>
-                <div class="mt-8 flex gap-4">
-                    <div
-                        class="flex -space-x-3 overflow-hidden rounded-full border-2 border-brand-teal p-1 bg-brand-teal/50 backdrop-blur-md">
-                        <img alt="User avatar 1"
-                            class="inline-block h-10 w-10 rounded-full border-2 border-brand-teal object-cover"
-                            data-alt="Portrait of a smiling woman"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5E3trdpQt59Pl0cNgELjJqc3IYnuW7KSCw_TL0M8GQBicg4SsYvclW3n9J4RjO-pNIK6BmmrbES66bp5kqzWibNIQuxKfSNZSNuaUkT7KPFtSNbC3jlKJr91YeGnFkJlVTHK3E9jI-u07KZvlZRrcEFB26AhFmaP5uYRqkTqtNhZHDU-2EsTaiTKdESOwhkb7olfmTGq9uPyXEwXPs_lIePRQokA7VaWO2zkImoL59yr2Iobj5spnNRzFihC06bqdhZSaczw4e8ZZ" />
-                        <img alt="User avatar 2"
-                            class="inline-block h-10 w-10 rounded-full border-2 border-brand-teal object-cover"
-                            data-alt="Portrait of a man with glasses"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmzgALSeqi-KxMPtOVlG3u616hK__UzurGwITOPs6CD2y_5_jP3zTeik2-s_VZoR7HbWjkLRVpdoISBapXXO3IEgwpurpEp8q5BI_L6dff6NxDO-tD0_JuS9tAeNVmjTI8K0DUMyiqTSjq9IAg2WqV9HKK5XTARC0X3hspyMG0NBx6Y70Hiy91dQnWV3CrC3eHJCYmLBt1I3wX30ftlQ6ksXfLCveaLatMGJBfct5YkREvV3nUWnHqaWNIKf50HRjnkLzKWbtYt1OI" />
-                        <img alt="User avatar 3"
-                            class="inline-block h-10 w-10 rounded-full border-2 border-brand-teal object-cover"
-                            data-alt="Portrait of a man smiling"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoitw9x1c6jIBqGos46yALYjt9nMKvT42PadalBmItiLD9ZRWFFxYt0aor2hcoPPCBpbg97wLP4jv_Qdd7wDonS9AIMIEwMYoSiB-ylK2K0z_ESbp1c-cItwnsu2c9hvjxUcXDGY4RO1BckBdh89qQfJM0eY3lGwr1O_kPv7O5UoJMj3NFcD3ZQYdIanIj3nPchYC-03JIYCtrzhRCxX-ke98z8Mf5Vr5tGiYiz55RKppvWJZDGdFzBZTCE5-eOXE-IqmWb-lISV4_" />
-                    </div>
-                    <div class="flex flex-col justify-center">
-                        <span class="text-sm font-semibold text-white">Join 4,000+ Admins</span>
-                        <span class="text-xs text-brand-mint/70">Trusted globally</span>
-                    </div>
-                </div>
             </div>
-            <!-- Footer Left -->
-            <div class="relative z-10 flex justify-between text-sm text-brand-mint/60">
-                <p>© 2023 SecureGuard Inc.</p>
-                <div class="flex gap-4">
-                    <a class="hover:text-brand-mint transition-colors" href="#">Privacy</a>
-                    <a class="hover:text-brand-mint transition-colors" href="#">Terms</a>
-                </div>
+
+            <div class="relative z-10 flex justify-between text-sm text-brand-light/60">
+                <p>© 2026 Geek · Let´s be better</p>
             </div>
         </div>
-        <!-- Right Side: Login Form -->
+
         <div
             class="flex flex-1 flex-col justify-center bg-white px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24 xl:w-1/2">
             <div class="mx-auto w-full max-w-sm lg:w-96">
-                <!-- Mobile Logo (visible only on small screens) -->
-                <div class="mb-10 lg:hidden flex items-center gap-2 justify-center">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-teal text-white">
-                        <span class="material-symbols-outlined">shield_lock</span>
-                    </div>
-                    <span class="text-xl font-bold tracking-wide text-brand-teal">SecureGuard</span>
-                </div>
+
                 <div class="text-center lg:text-left">
-                    <h2 class="text-3xl font-bold tracking-tight text-text-dark">
-                        Admin Login
+                    <h2 class="text-3xl font-bold tracking-tight text-geek-black">
+                        Acceso al Sistema
                     </h2>
-                    <p class="mt-2 text-sm text-text-mid">
-                        Please enter your details to access the portal.
+                    <p class="mt-2 text-sm text-gray-500">
+                        Se requiere autenticación para ingresar al portal.
                     </p>
                 </div>
+
                 <div class="mt-10">
-                    <form action="#" class="space-y-8" method="POST">
-                        <!-- Email Field -->
+                    <form action="#" class="space-y-6" method="POST">
                         <div class="group relative">
-                            <label class="block text-sm font-medium leading-6 text-text-dark mb-1" for="email">
-                                Email Address
+                            <label class="block text-sm font-semibold leading-6 text-geek-black mb-1" for="email">
+                                Email
                             </label>
-                            <div class="relative mt-2 rounded-md shadow-sm">
+                            <div class="relative mt-2">
                                 <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <span class="material-symbols-outlined text-gray-400 text-[20px]">mail</span>
+                                    <span
+                                        class="material-symbols-outlined text-brand-primary text-[20px]">account_circle</span>
                                 </div>
                                 <input
-                                    class="block w-full rounded-lg border-0 py-3 pl-10 text-text-dark ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-brand-teal sm:text-sm sm:leading-6 bg-gray-50/50 transition-all duration-200"
-                                    id="email" name="email" placeholder="name@company.com" type="email" />
+                                    class="block w-full rounded-lg border-0 py-3 pl-10 text-geek-black ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-brand-primary bg-gray-50 transition-all"
+                                    id="email" name="email" placeholder="usuario@gmail.com" type="email" />
                             </div>
                         </div>
-                        <!-- Password Field -->
+
                         <div class="group relative">
-                            <label class="block text-sm font-medium leading-6 text-text-dark mb-1" for="password">
+                            <label class="block text-sm font-semibold leading-6 text-geek-black mb-1" for="password">
                                 Contraseña
                             </label>
-                            <div class="relative mt-2 rounded-md shadow-sm">
+                            <div class="relative mt-2">
                                 <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <span class="material-symbols-outlined text-gray-400 text-[20px]">lock</span>
+                                    <span class="material-symbols-outlined text-brand-primary text-[20px]">lock</span>
                                 </div>
+
                                 <input
-                                    class="block w-full rounded-lg border-0 py-3 pl-10 text-text-dark ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-brand-teal sm:text-sm sm:leading-6 bg-gray-50/50 transition-all duration-200"
+                                    class="block w-full rounded-lg border-0 py-3 pl-10 pr-10 text-geek-black ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-brand-primary bg-gray-50 transition-all"
                                     id="password" name="password" placeholder="••••••••" type="password" />
+
+                                <button type="button" id="toggle-password"
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-brand-primary transition-colors">
+                                    <span id="password-icon"
+                                        class="material-symbols-outlined text-[20px]">visibility</span>
+                                </button>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <input class="h-4 w-4 rounded border-gray-300 text-brand-teal focus:ring-brand-teal"
-                                    id="remember-me" name="remember-me" type="checkbox" />
-                                <label class="ml-2 block text-sm text-gray-600" for="remember-me">Remember me</label>
-                            </div>
-                            <div class="text-sm">
-                                <a class="font-medium text-brand-teal hover:text-brand-teal/80 transition-colors"
-                                    href="#">
-                                    Forgot password?
-                                </a>
-                            </div>
-                        </div>
+
                         <div>
                             <button
-                                class="group relative flex w-full justify-center rounded-lg bg-gradient-to-r from-brand-teal to-[#264f47] px-3 py-3.5 text-sm font-semibold text-white shadow-sm hover:to-brand-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-teal transition-all duration-300"
+                                class="group relative flex w-full justify-center rounded-lg bg-brand-primary px-3 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-primary transition-all duration-300 uppercase tracking-widest"
                                 type="button">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <span aria-hidden="true"
-                                        class="material-symbols-outlined h-5 w-5 text-brand-mint group-hover:text-white transition-colors">login</span>
+                                    <span
+                                        class="material-symbols-outlined h-5 w-5 text-white/70 group-hover:text-white transition-colors">verified_user</span>
                                 </span>
-                                Log In
+                                Ingresar al Panel
                             </button>
                         </div>
                     </form>
-
                 </div>
             </div>
         </div>
+    </div>
+    <script type="module" src="js/views/usuarioView.js"></script>
+    <script type="module" src="js/controllers/usuarioController.js"></script>
 </body>
 
 </html>

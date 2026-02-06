@@ -1,12 +1,73 @@
 import { categoriasController } from './controllers/categoriasController.js';
 import { productoController } from './controllers/productoController.js';
 import { importacionController } from './controllers/importacionController.js';
+// Agregamos la importación del modelo de usuario
+import { usuarioModel } from './models/usuarioModel.js';
 
 /**
  * Navigation Controller - Nexus Admin Suite
- * Integra carga de IFRAMEs, AJAX, MVC y UI de Sidebar
+ * Integra carga de IFRAMEs, AJAX, MVC, UI de Sidebar y PROTECCIÓN DE RUTAS
  */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // --- 0. PROTECCIÓN DE RUTAS Y SESIÓN ---
+    const verificarAcceso = async () => {
+        const sesion = await usuarioModel.obtenerSesionActual();
+
+        if (!sesion || sesion.perfil.rol.toLowerCase() !== 'owner') {
+            window.location.href = '../index.html';
+            return null;
+        }
+        return sesion;
+    };
+
+    const sesionActiva = await verificarAcceso();
+    if (!sesionActiva) return; // Detiene la ejecución si no está autorizado
+
+    // --- 0.1 CARGAR DATOS DEL USUARIO EN LA UI ---
+   // --- CARGAR DATOS DEL USUARIO EN LA UI ---
+    const perfil = sesionActiva.perfil;
+    const userNameDisplay = document.querySelector('.sidebar-hide p.text-slate-800.text-sm.font-bold');
+    const userRoleDisplay = document.querySelector('.sidebar-hide p.text-slate-500.text-\\[11px\\]');
+    const userAvatarImg = document.querySelector('aside img[alt="Profile"]');
+
+    if (userNameDisplay) userNameDisplay.textContent = `${perfil.nombres} ${perfil.apellido_paterno}`;
+    if (userRoleDisplay) userRoleDisplay.textContent = perfil.rol.charAt(0).toUpperCase() + perfil.rol.slice(1);
+    if (userAvatarImg) {
+        userAvatarImg.src = `https://ui-avatars.com/api/?name=${perfil.nombres}+${perfil.apellido_paterno}&background=3b82f6&color=fff`;
+        // Añadimos una clase al contenedor del avatar para el CSS
+        userAvatarImg.parentElement.classList.add('avatar-container');
+    }
+
+    // --- 0.2 INICIALIZACIÓN AUTOMÁTICA DE PRODUCTOS ---
+    try {
+        // Cargamos la vista de productos por defecto al entrar
+        await productoController.inicializar();
+    } catch (error) {
+        console.error("Error al cargar productos iniciales:", error);
+    }
+
+    // --- 0.3 LÓGICA DE LOGOUT ---
+    const btnLogout = document.querySelector('button[title="Cerrar Sesión"]');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+            const result = await Swal.fire({
+                title: '¿Cerrar sesión?',
+                text: "Se cerrará tu acceso al panel administrativo.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Sí, salir',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                await usuarioModel.logout();
+                window.location.href = '../index.html';
+            }
+        });
+    }
 
     // --- EXPOSICIÓN GLOBAL PARA EVENTOS ONCLICK ---
     window.categoriasController = categoriasController;
@@ -17,89 +78,83 @@ document.addEventListener('DOMContentLoaded', () => {
     const contentArea = document.getElementById('content-area');
 
     // --- INYECCIÓN DE ESTILOS GLOBALES (Modo Oscuro Automático) ---
+    // --- INYECCIÓN DE ESTILOS GLOBALES (Modo Oscuro y Alineación) ---
+    // --- INYECCIÓN DE ESTILOS GLOBALES (Corrección de Recorte de Avatar) ---
     const inyectarEstilosGlobales = () => {
         if (document.getElementById('nexus-dynamic-styles')) return;
         const style = document.createElement('style');
         style.id = 'nexus-dynamic-styles';
         style.innerHTML = `
-            * { transition: background-color 0.2s ease, border-color 0.2s ease; }
+            * { transition: background-color 0.2s ease, border-color 0.2s ease, width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             .dark body { background-color: #101922 !important; color: #f1f5f9; }
             .dark #main-sidebar { background-color: #101922 !important; border-right-color: #1e293b; }
-            .dark header { background-color: #101922 !important; border-bottom-color: #1e293b; }
             .dark .bg-white { background-color: #16222e !important; color: #f1f5f9 !important; }
-            .dark .border-slate-200, .dark .border-gray-200 { border-color: #1e293b !important; }
-            .dark .text-slate-800, .dark .text-gray-800 { color: #f1f5f9 !important; }
-            .dark .text-slate-500, .dark .text-gray-500 { color: #94a3b8 !important; }
             .animate-fade-in { animation: fadeIn 0.3s ease-out; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+            /* Evita que el avatar se corte al colapsar */
+            .sidebar-colapsado .profile-wrapper { 
+                justify-content: center !important; 
+                padding: 0 !important; 
+                border: none !important; 
+                background: transparent !important; 
+                box-shadow: none !important;
+                overflow: visible !important; /* Crucial para que no se corte */
+            }
+            .sidebar-colapsado .logout-btn { justify-content: center !important; padding: 0.5rem 0 !important; }
+            .sidebar-colapsado .avatar-container { margin: 0 auto !important; display: flex; justify-content: center; }
+            
+            /* Asegura que el avatar mantenga su tamaño circular */
+            .avatar-container img { min-width: 40px; min-height: 40px; }
         `;
         document.head.appendChild(style);
     };
     inyectarEstilosGlobales();
 
-    // --- LÓGICA DE UI: SIDEBAR ---
+    // --- LÓGICA DE UI: SIDEBAR (Corregida para alineación) ---
     window.sidebarController = {
         toggle() {
             const sidebar = document.getElementById('main-sidebar');
             const icon = document.getElementById('sidebar-icon');
             const logoImg = document.getElementById('sidebar-logo');
+
+            // Intentamos capturar los contenedores de perfil y logout para alinearlos
+            const profileWrapper = sidebar.querySelector('.flex.items-center.bg-white.rounded-xl') || sidebar.querySelector('aside .p-4 div:has(img)');
+            const logoutBtn = document.querySelector('button[title="Cerrar Sesión"]');
+
             const isColapsed = sidebar.classList.toggle('w-[80px]');
 
             if (isColapsed) {
                 sidebar.classList.remove('w-[280px]');
+                sidebar.classList.add('sidebar-colapsado'); // Clase de control para CSS
                 icon.innerText = 'chevron_right';
+
                 if (logoImg) {
                     logoImg.src = 'images/favicon.png';
                     logoImg.classList.add('h-8');
                 }
+
+                if (profileWrapper) profileWrapper.classList.add('profile-wrapper');
+                if (logoutBtn) logoutBtn.classList.add('logout-btn');
+
                 document.querySelectorAll('.sidebar-hide').forEach(el => el.classList.add('hidden'));
             } else {
                 sidebar.classList.add('w-[280px]');
+                sidebar.classList.remove('sidebar-colapsado');
                 icon.innerText = 'chevron_left';
+
                 if (logoImg) {
                     logoImg.src = 'images/logo.png';
                     logoImg.classList.remove('h-8');
                 }
+
+                if (profileWrapper) profileWrapper.classList.remove('profile-wrapper');
+                if (logoutBtn) logoutBtn.classList.remove('logout-btn');
+
                 document.querySelectorAll('.sidebar-hide').forEach(el => el.classList.remove('hidden'));
             }
         }
     };
-
-    // --- LÓGICA DE MODO OSCURO ---
-    window.themeController = {
-        toggle() {
-            const root = document.documentElement;
-            const cursor = document.getElementById('theme-cursor');
-            const bg = document.getElementById('theme-switch');
-            const isDark = root.classList.toggle('dark');
-
-            if (cursor && bg) {
-                cursor.style.transform = isDark ? 'translateX(20px)' : 'translateX(0px)';
-                bg.classList.toggle('bg-blue-600', isDark);
-                bg.classList.toggle('bg-slate-200', !isDark);
-            }
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            const iframe = contentArea.querySelector('iframe');
-            if (iframe && iframe.contentDocument) {
-                iframe.contentDocument.documentElement.classList.toggle('dark', isDark);
-            }
-        }
-    };
-
-    const inicializarTema = () => {
-        const temaGuardado = localStorage.getItem('theme');
-        if (temaGuardado === 'dark') {
-            document.documentElement.classList.add('dark');
-            const cursor = document.getElementById('theme-cursor');
-            const bg = document.getElementById('theme-switch');
-            if (cursor && bg) {
-                cursor.style.transform = 'translateX(20px)';
-                bg.classList.add('bg-blue-600');
-                bg.classList.remove('bg-slate-200');
-            }
-        }
-    };
-    inicializarTema();
 
     // --- LÓGICA DE CARGA DE CONTENIDO ---
     async function cargarSeccion(url, type, elemento) {
@@ -130,14 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- NAVEGACIÓN UNIFICADA (DELEGACIÓN DE EVENTOS) ---
-    // Escuchamos clics en todo el sidebar para atrapar los 'onclick' del HTML
     document.getElementById('main-sidebar')?.addEventListener('click', (e) => {
         const item = e.target.closest('.nav-item, [id^="link-"], button, summary');
         if (!item) return;
 
-        // Si es un summary con un div adentro (tus categorías/productos)
-        const clickableDiv = item.querySelector('div[onclick]');
-        
         // Ejecutamos la limpieza visual
         actualizarEstadoActivo(item);
     });
@@ -184,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function actualizarEstadoActivo(elementoActivo) {
         if (!elementoActivo) return;
 
-        // 1. Limpieza de TODOS los elementos
         const todosLosLinks = document.querySelectorAll('.nav-item, [id^="link-"], details button, summary');
         todosLosLinks.forEach(i => {
             i.classList.remove(
@@ -195,12 +245,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 'bg-slate-100'
             );
             i.classList.add('text-slate-500');
-            // Si el summary tiene un p interno, también lo limpiamos
             const p = i.querySelector('p');
-            if(p) p.classList.remove('text-blue-600');
+            if (p) p.classList.remove('text-blue-600');
         });
 
-        // 2. Aplicación de estado activo
         elementoActivo.classList.remove('text-slate-500', 'text-slate-400');
         const id = elementoActivo.id || '';
         const texto = elementoActivo.innerText.toLowerCase();

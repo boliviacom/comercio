@@ -79,42 +79,89 @@ export const RegisterCarrusel = {
     pedirUrlImagen() {
         carruselActions.pedirUrlImagen();
     },
+    
+    cerrarYRefrescar() {
+        // 1. Quitar el formulario y restaurar el contenedor de la tabla
+        if (this._container && this._originalContent) {
+            this._container.innerHTML = this._originalContent;
+        }
+
+        // 2. Ejecutar el refresco de datos
+        if (window.carruselController_View) {
+            window.carruselController_View.render();
+        }
+
+        // 3. Hacer scroll hacia arriba para que el usuario vea la tabla
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
 
     agregarItemALista() {
-        // 1. Capturamos el ítem del DOM (asegúrate que carruselActions.capturarItem() devuelva el objeto)
+        // 1. Capturamos el ítem usando la lógica de carruselActions
         const itemCapturado = carruselActions.capturarItem();
-        if (!itemCapturado) return;
+
+        // Verificación de seguridad para evitar que el proceso se rompa
+        if (!itemCapturado) {
+            console.error("Error: No se pudo capturar la información del ítem.");
+            return;
+        }
 
         const state = window.carruselState;
 
-        // 2. Guardar en el State
-        if (state._editingItemIdx !== null) {
+        // 2. Guardar en el State (Memoria temporal)
+        if (state._editingItemIdx !== null && state._editingItemIdx !== undefined) {
             state.items[state._editingItemIdx] = itemCapturado;
-            state._editingItemIdx = null; // Salir de modo edición
+            state._editingItemIdx = null; // Resetear el modo edición
         } else {
             state.items.push(itemCapturado);
         }
 
-        // 3. REFRESCAR LA INTERFAZ
-        // Usamos el nombre exacto de tu método en el template y el contenedor correcto
+        // 3. REFRESCAR LA INTERFAZ (Lista de ítems)
         const container = document.getElementById('items_list_container');
-        if (container) {
-            // Llamamos al template para generar el nuevo HTML
+        if (container && typeof carruselTemplates.renderItemsList === 'function') {
             container.innerHTML = carruselTemplates.renderItemsList(state.items);
         }
 
-        // 4. Actualizar también la Previsualización (Live Preview)
+        // 4. Actualizar la Previsualización (Live Preview)
         const previewContainer = document.getElementById('live_preview_container');
-        if (previewContainer) {
+        if (previewContainer && typeof carruselTemplates.renderLivePreview === 'function') {
             previewContainer.innerHTML = carruselTemplates.renderLivePreview(state.items, 0, state.config.tipo);
         }
 
-        // 5. Limpiar el formulario y resetear a estado "Nuevo"
-        RegisterCarrusel.limpiarFormularioDespuesDeAgregar();
+        // 5. LIMPIAR EL FORMULARIO (Solución al error TypeError)
+        // En lugar de llamar a una función externa que falla, ejecutamos la limpieza aquí
+        this.limpiarFormularioItem();
+
+        // Feedback visual para el usuario
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000
+        });
+        toast.fire({
+            icon: 'success',
+            title: 'Cambios aplicados en la lista'
+        });
+    },
+
+    /**
+     * Este es el método que faltaba y causaba el error en consola.
+     * Limpia el formulario y lo devuelve a su estado original.
+     */
+    limpiarFormularioItem() {
+        const state = window.carruselState;
+        const formContainer = document.getElementById('form_item_container');
+
+        if (formContainer && typeof carruselTemplates.renderFormItem === 'function') {
+            // Re-renderizamos el formulario en modo "nuevo" (null)
+            formContainer.innerHTML = carruselTemplates.renderFormItem(state.config.tipo, null);
+        }
+
+        // Aseguramos que el buscador esté vacío
+        const searchInput = document.getElementById('it_search');
+        if (searchInput) searchInput.value = '';
     },
     cargarItemParaEditar(idx) {
-        console.log("--- CARGANDO ÍTEM PARA EDICIÓN ---");
-
         // 1. Acceso seguro al array de ítems (manejando estructura anidada o directa)
         const itemsArray = Array.isArray(carruselState.items)
             ? carruselState.items
@@ -176,8 +223,6 @@ export const RegisterCarrusel = {
             if (typeof carruselActions._actualizarPreviewLocal === 'function') {
                 carruselActions._actualizarPreviewLocal(valorMedia);
             }
-
-            console.log("Ítem cargado en inputs:", itemMapeado);
         }
     },
 

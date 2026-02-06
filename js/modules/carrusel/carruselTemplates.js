@@ -5,9 +5,6 @@ export const carruselTemplates = {
      * Renderiza la estructura base del editor
      */
     renderMain(isEdit, paso, config, items) {
-        // Debug: Descomenta la siguiente línea para ver si llegan items al render
-        // console.log("Items en renderMain:", items); 
-
         return `
         <div class="h-full w-full bg-slate-50/50 overflow-y-auto p-4 md:p-8 animate-fade-in custom-scrollbar">
             ${this._renderHeader(isEdit, paso)}
@@ -415,5 +412,71 @@ export const carruselTemplates = {
         }).join('')}
         </div>
     </div>`;
+    },
+    renderConsultaPro(items, indexActivo = 0, tipo) {
+        if (!items || items.length === 0) return `<div class="p-10 text-center text-white/50">Sin Contenido</div>`;
+
+        const esBanner = tipo === 'banners';
+        let slidesHTML = '';
+        let totalSlides = 0;
+
+        if (esBanner) {
+            totalSlides = items.length;
+            slidesHTML = items.map((item, idx) => `
+            <div class="modal-slide-consulta ${idx === indexActivo ? 'flex' : 'hidden'} animate-fade-in w-full justify-center">
+                <div class="w-full max-w-[850px] aspect-[21/9] bg-white rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white relative">
+                    <img src="${item.imagen}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent flex flex-col justify-end p-10 text-left">
+                        <h3 class="text-white text-4xl font-black uppercase leading-none">${item.titulo || ''}</h3>
+                        <p class="text-blue-400 font-bold uppercase tracking-[0.3em] text-xs mt-2">${item.subtitulo || ''}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        } else {
+            const grupos = [];
+            for (let i = 0; i < items.length; i += 3) grupos.push(items.slice(i, i + 3));
+            totalSlides = grupos.length;
+
+            slidesHTML = grupos.map((grupo, idx) => `
+            <div class="modal-slide-consulta ${idx === indexActivo ? 'flex' : 'hidden'} animate-fade-in w-full justify-center gap-6">
+                ${grupo.map(item => {
+                const esIcono = item.imagen && item.imagen.startsWith('fa-');
+                return `
+                        <div class="w-[280px] bg-white rounded-[3rem] p-8 shadow-2xl flex flex-col items-center text-center border border-white/20">
+                            <div class="w-24 h-24 mb-6 flex items-center justify-center bg-slate-50 rounded-[2rem] overflow-hidden shadow-inner">
+                                ${esIcono ? `<i class="${item.imagen} text-4xl text-blue-600"></i>` : `<img src="${item.imagen}" class="w-full h-full object-contain p-4">`}
+                            </div>
+                            <h4 class="font-black text-[13px] text-slate-800 uppercase line-clamp-2 h-10 leading-tight">${item.titulo}</h4>
+                            <div class="w-10 h-1 bg-blue-500 rounded-full mt-4 mb-2"></div>
+                            <p class="text-blue-600 font-black text-[10px] uppercase tracking-widest">${item.subtitulo || ''}</p>
+                        </div>
+                    `;
+            }).join('')}
+            </div>
+        `).join('');
+        }
+
+        return `
+        <div class="relative w-full max-w-7xl mx-auto px-16"> 
+            <div id="modal-track-consulta" class="py-10 overflow-visible">${slidesHTML}</div>
+            
+            <div class="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none z-[9999]">
+                <button onclick="event.stopPropagation(); carruselController_View.moverModalSlide(-1, ${totalSlides})" class="pointer-events-auto w-16 h-16 ml-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-slate-900 transition-all shadow-2xl active:scale-90">
+                    <span class="material-symbols-outlined text-4xl">chevron_left</span>
+                </button>
+                <button onclick="event.stopPropagation(); carruselController_View.moverModalSlide(1, ${totalSlides})" class="pointer-events-auto w-16 h-16 mr-2 rounded-full bg-white/10 backdrop-blur-xl border border-white/30 text-white flex items-center justify-center hover:bg-white hover:text-slate-900 transition-all shadow-2xl active:scale-90">
+                    <span class="material-symbols-outlined text-4xl">chevron_right</span>
+                </button>
+            </div>
+
+            <div class="flex justify-center gap-3 mt-4" id="modal-dots-consulta">
+                ${Array.from({ length: totalSlides }).map((_, i) => `
+                    <div class="h-1.5 transition-all duration-500 rounded-full ${i === indexActivo ? 'w-10 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]' : 'w-3 bg-white/20'}"></div>
+                `).join('')}
+            </div>
+        </div>
+    `;
     }
 };
+window.carruselTemplates = carruselTemplates;

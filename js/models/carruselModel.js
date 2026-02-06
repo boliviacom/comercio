@@ -106,21 +106,45 @@ export const carruselModel = {
             return { exito: false, mensaje: err.message };
         }
     },
+    async obtenerItemsPorCarrusel(carruselId) {
+        try {
+            const { data, error } = await supabase
+                .from('carrusel_items')
+                .select('*')
+                .eq('carrusel_id', carruselId)
+                .order('orden', { ascending: true });
 
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('Error al obtener ítems del carrusel:', err.message);
+            return [];
+        }
+    },
     /**
      * Elimina un carrusel y sus ítems
      */
     async eliminar(id) {
         try {
-            const { error } = await supabase
+            // Paso A: Eliminar los ítems vinculados (hijos)
+            const { error: errorItems } = await supabase
+                .from('carrusel_items')
+                .delete()
+                .eq('carrusel_id', id);
+
+            if (errorItems) throw errorItems;
+
+            // Paso B: Eliminar el carrusel (padre)
+            const { error: errorCarrusel } = await supabase
                 .from('carruseles')
                 .delete()
                 .eq('id', id);
 
-            if (error) throw error;
+            if (errorCarrusel) throw errorCarrusel;
+
             return { exito: true };
         } catch (err) {
-            console.error('Error al eliminar carrusel:', err.message);
+            console.error('Error en carruselModel.eliminar:', err.message);
             return { exito: false, mensaje: err.message };
         }
     },
@@ -192,7 +216,8 @@ export const carruselModel = {
                 orden: item.orden || 0,
                 titulo_manual: item.titulo_manual || null,
                 subtitulo_manual: item.subtitulo_manual || null,
-                imagen_url_manual: item.imagen_url_manual || null,
+                // Aquí centralizamos tanto la URL como el nombre del icono
+                imagen_url_manual: item.imagen_url_manual || item.icono_manual || null,
                 link_destino_manual: item.link_destino_manual || null,
                 producto_id: item.producto_id || null,
                 categoria_id: item.categoria_id || null

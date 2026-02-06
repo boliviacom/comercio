@@ -61,6 +61,24 @@ export const carruselController = {
             return [];
         }
     },
+    async cargarItemsPorCarrusel(id) {
+        try {
+            // Usamos obtenerItems porque este ya trae producto:producto_id(...) y categoria:categoria_id(...)
+            const dataRaw = await carruselModel.obtenerItems(id);
+
+            // Mapeamos para que el template reciba propiedades estandarizadas
+            return dataRaw.map(item => ({
+                titulo: item.titulo_manual || item.producto?.nombre || item.categoria?.nombre || 'Sin título',
+                subtitulo: item.subtitulo_manual || (item.producto?.precio ? `$ ${item.producto.precio}` : ''),
+                // Prioridad de imagen: manual -> producto -> categoría
+                imagen: item.imagen_url_manual || item.producto?.imagen_url || item.categoria?.imagen || 'fa-solid fa-image',
+                tipo: item.producto_id ? 'producto' : (item.categoria_id ? 'categoria' : 'banner')
+            }));
+        } catch (error) {
+            console.error("Error en cargarItemsPorCarrusel:", error);
+            return [];
+        }
+    },
 
     async guardarConfiguracion(datos, id = null) {
         try {
@@ -116,18 +134,40 @@ export const carruselController = {
         }
     },
 
+    // Dentro de carruselController.js
     async borrarCarruselCompleto(id) {
-        const carruseles = await this.cargarCarruseles();
-        const registro = carruseles.find(c => c.id == id);
-        if (!registro) return;
+        try {
+            // 1. Obtenemos la lista actualizada para encontrar el nombre real
+            const carruseles = await carruselModel.listar();
 
-        const confirmado = await carruselController_View.confirmarEliminacion(registro.nombre);
-        if (confirmado) {
-            const res = await carruselModel.eliminar(id);
-            if (res.exito) {
-                carruselController_View.notificarExito("Carrusel eliminado");
-                this.inicializar();
+            // Buscamos el objeto que coincida con el ID
+            const carruselEncontrado = carruseles.find(c => String(c.id) === String(id));
+
+            // Si lo encuentra usa el nombre, si no, usa el respaldo
+            const nombreParaMostrar = carruselEncontrado ? carruselEncontrado.nombre : 'este registro';
+
+            // 2. Llamamos a la confirmación de la Vista pasando el nombre real
+            const confirmado = await carruselController_View.confirmarEliminacion(nombreParaMostrar);
+
+            if (confirmado) {
+                Swal.fire({
+                    title: 'Eliminando...',
+                    didOpen: () => Swal.showLoading(),
+                    background: 'transparent'
+                });
+
+                const resultado = await carruselModel.eliminar(id);
+
+                if (resultado.exito) {
+                    carruselController_View.notificarExito(`"${nombreParaMostrar}" eliminado correctamente`);
+                    carruselController_View.render(); // Recarga la tabla
+                } else {
+                    carruselController_View.notificarError("Error: " + resultado.mensaje);
+                }
             }
+        } catch (error) {
+            console.error("Error en el proceso de borrado:", error);
+            carruselController_View.notificarError("Ocurrió un error inesperado.");
         }
     },
 
@@ -219,7 +259,23 @@ export const carruselController = {
 
 
     async vincularItemSinRefrescar(dataItem) {
-        return await carruselModel.agregarItem(dataItem);
+        // Mapeamos los campos del frontend a los nombres de columna de la DB
+        const payloadDB = {
+            carrusel_id: dataItem.carrusel_id,
+            orden: dataItem.orden,
+            titulo_manual: dataItem.titulo_manual,
+            subtitulo_manual: dataItem.subtitulo_manual,
+            // Prioridad: Si viene icono_manual lo usamos, si no, lo extraemos de imagen_preview si es fa-
+            icono_manual: dataItem.icono_manual || (dataItem.imagen_preview?.startsWith('fa-') ? dataItem.imagen_preview : null),
+            imagen_url_manual: dataItem.imagen_url_manual || (!dataItem.imagen_preview?.startsWith('fa-') ? dataItem.imagen_preview : null),
+            link_destino_manual: dataItem.link_destino_manual,
+            producto_id: dataItem.producto_id || null,
+            categoria_id: dataItem.categoria_id || null,
+            activo: true
+        };
+
+        console.log("📤 Controller enviando al Model:", payloadDB);
+        return await carruselModel.agregarItem(payloadDB);
     }
 };
 

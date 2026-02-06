@@ -140,7 +140,6 @@ export const carruselState = {
                 ...dataItem
             };
             this._editingItemIdx = null;
-            console.log("Ítem editado guardado en State:", listaReal[this._editingItemIdx]);
             return;
         }
 
@@ -159,7 +158,6 @@ export const carruselState = {
                     ...dataItem
                 };
                 this._slideActivo = idxExistente;
-                console.log("Ítem existente actualizado en State");
                 return;
             }
         }
@@ -167,7 +165,6 @@ export const carruselState = {
         // 4. Si es realmente nuevo, lo agregamos al array real
         listaReal.push(dataItem);
         this._slideActivo = listaReal.length - 1;
-        console.log("Nuevo ítem agregado al State");
     },
     /**
      * Cambia la posición de un ítem en el array
