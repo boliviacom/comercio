@@ -1,4 +1,5 @@
-import { usuarioController } from '../controllers/usuarioController.js';
+// Importamos el servicio en lugar del modelo/controlador antiguo
+import { authService } from '../services/authService.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const emailInput = document.getElementById('email');
@@ -8,28 +9,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordIcon = document.getElementById('password-icon');
 
     /**
-     * 1. Lógica exclusiva para Ver/Ocultar Contraseña
-     * Esta función NO llama a ninguna validación, solo manipula el DOM.
+     * 1. Lógica para Ver/Ocultar Contraseña (Se queda igual)
      */
     if (togglePasswordBtn) {
         togglePasswordBtn.addEventListener('click', (e) => {
-            // Bloqueamos cualquier acción de formulario o burbujeo
             e.preventDefault();
             e.stopPropagation();
-
             const isPassword = passwordInput.type === 'password';
             passwordInput.type = isPassword ? 'text' : 'password';
-
-            // Cambio visual del icono
             passwordIcon.textContent = isPassword ? 'visibility_off' : 'visibility';
         });
     }
 
     /**
-     * 2. Lógica de Autenticación (Solo para el botón de Ingresar)
+     * 2. Lógica de Autenticación conectada a EXPRESS
      */
     const ejecutarLogin = async (e) => {
-        // Aseguramos que el evento venga del botón de login o del Enter
         if (e) e.preventDefault();
 
         const email = emailInput.value.trim();
@@ -45,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Feedback visual de carga en el botón de login
+        // Feedback visual
         const originalContent = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = `
@@ -59,26 +54,35 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         try {
-            const resultado = await usuarioController.manejarLogin(email, password);
+            // LLAMADA AL SERVICIO QUE CONECTA CON EXPRESS
+            const resultado = await authService.login(email, password);
 
-            if (!resultado.exito) {
+            if (resultado.exito) {
+                // Si el login es exitoso en Express, guardamos datos en sesión
+                // Nota: Express nos devuelve 'perfil' dentro de la respuesta
+                sessionStorage.setItem('usuario_rol', resultado.perfil.rol);
+                sessionStorage.setItem('usuario_nombre', resultado.perfil.nombres);
+
+                // Redirección manual (ya que el servicio no redirecciona, solo da datos)
+                window.location.href = '/administracion.html';
+            } else {
+                // Si el backend (o el middleware de owner) rechazó el acceso
                 Swal.fire({
                     icon: 'error',
                     title: 'Acceso Denegado',
-                    text: resultado.mensaje,
+                    text: resultado.mensaje || 'Credenciales incorrectas',
                     confirmButtonColor: '#162925'
                 });
 
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalContent;
             }
-            // Si el login es exitoso, el controlador hace el redireccionamiento.
         } catch (error) {
             console.error("Error crítico:", error);
             Swal.fire({
                 icon: 'error',
                 title: 'Error de conexión',
-                text: 'Hubo un problema al conectar con el servidor.',
+                text: 'No se pudo conectar con el servidor de autenticación.',
                 confirmButtonColor: '#162925'
             });
             submitBtn.disabled = false;
@@ -86,12 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Asignación de eventos de Login
-    submitBtn.addEventListener('click', ejecutarLogin);
+    // Eventos
+    if (submitBtn) submitBtn.addEventListener('click', ejecutarLogin);
 
     [emailInput, passwordInput].forEach(input => {
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') ejecutarLogin(e);
-        });
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') ejecutarLogin(e);
+            });
+        }
     });
 });

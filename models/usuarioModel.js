@@ -1,5 +1,5 @@
 // models/usuarioModel.js
-const supabase = require('../config/supabaseClient'); // Asegúrate que el nombre coincida
+const supabase = require('../config/supabase'); // Asegúrate que el nombre coincida
 
 const usuarioModel = {
     // ==========================================
