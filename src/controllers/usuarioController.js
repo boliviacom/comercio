@@ -21,8 +21,6 @@ const usuarioController = {
                     respuesta.data?.access_token ||
                     respuesta.access_token;
 
-                console.log("Token capturado:", token ? "SÍ" : "NO");
-
                 if (!token) {
                     // Si sigue saliendo NO, vamos a ver qué tiene el objeto respuesta para entenderlo
                     console.error("Estructura de respuesta inesperada:", JSON.stringify(respuesta));
