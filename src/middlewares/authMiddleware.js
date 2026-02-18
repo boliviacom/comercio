@@ -1,29 +1,27 @@
-// middlewares/authMiddleware.js
-const usuarioModel = require('../models/usuarioModel');
+const usuarioService = require('../services/usuarioService');
 
 const esOwner = async (req, res, next) => {
     try {
-        // 1. Extraemos el token de la cookie
         const token = req.cookies['sb-access-token'];
 
-        if (!token) {
-            console.log("No hay token en las cookies, denegando acceso.");
-            return res.redirect('/'); // Si no hay cookie, al login
+        // Si no hay token, no perdemos tiempo y redirigimos
+        if (!token) return res.redirect('/');
+
+        const usuarioFull = await usuarioService.validarSesion(token);
+
+        // Validamos que la sesión exista y que el rol sea 'owner'
+        if (usuarioFull?.perfil?.rol?.toLowerCase() === 'owner') {
+            // Adjuntamos el usuario al objeto 'req' por si lo necesitas en el dashboard
+            req.usuario = usuarioFull; 
+            return next();
         }
 
-        // 2. Validamos la sesión con el modelo
-        // Nota: Asegúrate de que obtenerSesionActual acepte el token como parámetro
-        const sesion = await usuarioModel.obtenerSesionActual(token);
+        // Si llegamos aquí es porque no es owner o la sesión no es válida
+        return res.redirect('/'); 
 
-        if (sesion && sesion.perfil.rol.toLowerCase() === 'owner') {
-            return next(); // Es dueño, adelante
-        }
-
-        console.log("Usuario no es Owner, redirigiendo...");
-        res.redirect('/'); 
     } catch (error) {
-        console.error("Error en middleware auth:", error.message);
-        res.redirect('/');
+        // En caso de error crítico, simplemente mandamos al inicio para proteger la ruta
+        return res.redirect('/');
     }
 };
 

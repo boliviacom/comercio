@@ -1,198 +1,75 @@
-// models/usuarioModel.js
-const supabase = require('../config/supabase'); // Asegúrate que el nombre coincida
+// src/models/usuarioModel.js
+const supabase = require('../config/supabase');
 
 const usuarioModel = {
-    // ==========================================
-    // SECCIÓN: AUTENTICACIÓN (AUTH)
-    // ==========================================
-
     /**
-     * Inicia sesión en Supabase Auth y obtiene el perfil de la tabla pública
+     * Inserta un nuevo perfil en la tabla 'usuario'
      */
-    async login(email, password) {
-        try {
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
+    async crearPerfil(datos) {
+        const { data, error } = await supabase
+            .from('usuario')
+            .insert([datos])
+            .select()
+            .single();
 
-            if (authError) throw authError;
-
-            const { data: perfil, error: perfilError } = await supabase
-                .from('usuario')
-                .select('*')
-                .eq('id', authData.user.id)
-                .single();
-
-            if (perfilError) throw perfilError;
-
-            return { exito: true, user: authData.user, session: authData.session, perfil };
-        } catch (err) {
-            console.error('Error en usuarioModel.login:', err.message);
-            return { exito: false, mensaje: err.message };
-        }
+        if (error) throw error;
+        return data;
     },
 
     /**
-     * Obtiene los datos del usuario actual si hay una sesión activa
-     */
-    // En models/usuarioModel.js
-    async obtenerSesionActual(token) {
-        try {
-            // Si pasas el token, Supabase valida esa sesión específica
-            const { data: { user }, error } = await supabase.auth.getUser(token);
-
-            if (error || !user) return null;
-
-            const { data: perfil } = await supabase
-                .from('usuario')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-
-            return { ...user, perfil };
-        } catch (err) {
-            return null;
-        }
-    },
-
-    /**
-     * Cierra la sesión globalmente y limpia el storage local
-     */
-    async logout() {
-        try {
-            const { error } = await supabase.auth.signOut();
-            // ELIMINADO: sessionStorage.clear(); 
-            // Explicación: El servidor no puede limpiar el storage del cliente.
-            return { exito: !error };
-        } catch (err) {
-            return { exito: false, mensaje: err.message };
-        }
-    },
-
-    // ==========================================
-    // SECCIÓN: CRUD Y GESTIÓN DE USUARIOS
-    // ==========================================
-
-    /**
-     * Registra un usuario en Auth e inserta su perfil en la tabla pública
-     */
-    async crear(datos) {
-        try {
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: datos.correo_electronico,
-                password: datos.password,
-            });
-
-            if (authError) throw authError;
-            if (!authData.user) throw new Error("No se pudo crear el usuario en Auth");
-
-            const payload = {
-                id: authData.user.id,
-                nombres: datos.nombres,
-                apellido_paterno: datos.apellido_paterno,
-                apellido_materno: datos.apellido_materno,
-                correo_electronico: datos.correo_electronico,
-                celular: datos.celular,
-                ci: datos.ci,
-                rol: datos.rol || 'cliente',
-                visible: true
-            };
-
-            const { data: perfil, error: perfilError } = await supabase
-                .from('usuario')
-                .insert([payload])
-                .select();
-
-            if (perfilError) throw perfilError;
-
-            return { exito: true, data: perfil[0] };
-        } catch (err) {
-            console.error('Error en usuarioModel.crear:', err.message);
-            return { exito: false, mensaje: err.message };
-        }
-    },
-
-    /**
-     * Obtiene todos los usuarios activos
-     */
-    async obtenerTodos() {
-        try {
-            const { data, error } = await supabase
-                .from('usuario')
-                .select('*')
-                .eq('visible', true)
-                .order('apellido_paterno', { ascending: true });
-
-            if (error) throw error;
-            return data;
-        } catch (error) {
-            console.error('Error al obtener usuarios:', error.message);
-            return [];
-        }
-    },
-
-    /**
-     * Obtiene un usuario por su UUID (ID de Auth)
+     * Obtiene un perfil por su ID (UUID de Auth)
      */
     async obtenerPorId(id) {
-        try {
-            const { data, error } = await supabase
-                .from('usuario')
-                .select('*')
-                .eq('id', id)
-                .single();
+        const { data, error } = await supabase
+            .from('usuario')
+            .select('*')
+            .eq('id', id)
+            .single();
 
-            if (error) throw error;
-            return data;
-        } catch (error) {
-            console.error(`Error al obtener usuario con ID ${id}:`, error.message);
-            return null;
-        }
+        if (error) throw error;
+        return data;
     },
 
     /**
-     * Actualiza datos parciales del perfil del usuario
+     * Obtiene todos los usuarios visibles ordenados
+     */
+    async obtenerTodosActivos() {
+        const { data, error } = await supabase
+            .from('usuario')
+            .select('*')
+            .eq('visible', true)
+            .order('apellido_paterno', { ascending: true });
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Actualiza datos en la tabla 'usuario'
      */
     async actualizar(id, cambios) {
-        try {
-            const { data, error } = await supabase
-                .from('usuario')
-                .update(cambios)
-                .eq('id', id);
+        const { data, error } = await supabase
+            .from('usuario')
+            .update(cambios)
+            .eq('id', id)
+            .select()
+            .single();
 
-            if (error) throw error;
-            return { exito: true };
-        } catch (error) {
-            return { exito: false, mensaje: error.message };
-        }
+        if (error) throw error;
+        return data;
     },
 
     /**
-     * Función para configuraciones especiales (usada por Owners/Admins)
+     * Consulta optimizada para configuraciones de Admin
      */
-    async obtenerDestinosConfiguracion() {
-        try {
-            const { data: usuarios, error: errUser } = await supabase
-                .from('usuario')
-                .select('id, nombres, apellido_paterno, apellido_materno, rol')
-                .eq('visible', true);
+    async obtenerListadoConfiguracion() {
+        const { data, error } = await supabase
+            .from('usuario')
+            .select('id, nombres, apellido_paterno, apellido_materno, rol')
+            .eq('visible', true);
 
-            if (errUser) throw errUser;
-
-            const rolesUnicos = [...new Set(usuarios.map(u => u.rol))];
-
-            return {
-                usuarios: usuarios.map(u => ({
-                    id: u.id,
-                    nombreCompleto: `${u.apellido_paterno} ${u.apellido_materno} ${u.nombres}`
-                })),
-                roles: rolesUnicos
-            };
-        } catch (error) {
-            console.error('Error en obtenerDestinosConfiguracion:', error.message);
-            return { usuarios: [], roles: [] };
-        }
+        if (error) throw error;
+        return data;
     }
 };
 

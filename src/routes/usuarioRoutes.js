@@ -1,26 +1,28 @@
-// routes/usuarioRoutes.js
 const express = require('express');
 const router = express.Router();
 const usuarioController = require('../controllers/usuarioController');
+// Aquí podrías importar middlewares de protección en el futuro
+// const { esOwner } = require('../middlewares/authMiddleware');
 
 // ==========================================
 // RUTAS DE AUTENTICACIÓN
 // ==========================================
 
-// POST /api/usuarios/login
+// Iniciar sesión (Genera la cookie sb-access-token)
 router.post('/login', usuarioController.login);
 
-// POST /api/usuarios/logout
+// Cerrar sesión (Limpia la cookie)
 router.post('/logout', usuarioController.logout);
 
 // ==========================================
 // RUTAS DE GESTIÓN (CRUD)
 // ==========================================
 
-// GET /api/usuarios/todos -> Para listar en el panel
+// Obtener todos los usuarios activos
+// Nota: Cambiamos a 'listarUsuarios' si así se llama en tu controlador refactorizado
 router.get('/todos', usuarioController.listarUsuarios);
 
-// POST /api/usuarios/registro -> Para crear nuevos usuarios
-//router.post('/registro', usuarioController.registrar);
+// Registrar un nuevo usuario (Auth + Perfil)
+router.post('/registro', usuarioController.registrar);
 
 module.exports = router;

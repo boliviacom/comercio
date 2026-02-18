@@ -1,9 +1,6 @@
 // public/js/services/authService.js
 
 export const authService = {
-    /**
-     * Envia credenciales al backend y guarda la sesión si es exitoso
-     */
     async login(email, password) {
         try {
             const response = await fetch('/api/usuarios/login', {
@@ -15,7 +12,7 @@ export const authService = {
             const data = await response.json();
 
             if (data.exito) {
-                // Guardamos el perfil para uso rápido en el frontend
+                // Guardamos info no sensible para la UI
                 sessionStorage.setItem('perfil_usuario', JSON.stringify(data.perfil));
             }
 
@@ -25,18 +22,11 @@ export const authService = {
         }
     },
 
-    /**
-     * Informa al backend del cierre de sesión y limpia el almacenamiento local
-     */
     async logout() {
         try {
             const response = await fetch('/api/usuarios/logout', { method: 'POST' });
-            const data = await response.json();
-            
-            // Limpiamos siempre el storage del cliente, responda lo que responda el server
             sessionStorage.clear();
-            
-            return data;
+            return await response.json();
         } catch (error) {
             sessionStorage.clear();
             return { exito: false };
@@ -44,10 +34,14 @@ export const authService = {
     },
 
     /**
-     * Verifica si el backend aún reconoce una sesión activa
+     * IMPORTANTE: Cambiamos la ruta a /perfil (la que definimos en routes)
      */
     async verificarSesion() {
-        const response = await fetch('/api/usuarios/sesion-actual');
-        return await response.json();
+        try {
+            const response = await fetch('/api/usuarios/perfil');
+            return await response.json();
+        } catch (error) {
+            return { exito: false };
+        }
     }
 };

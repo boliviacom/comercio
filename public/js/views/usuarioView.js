@@ -54,23 +54,30 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         try {
-            // LLAMADA AL SERVICIO QUE CONECTA CON EXPRESS
             const resultado = await authService.login(email, password);
 
             if (resultado.exito) {
-                // Si el login es exitoso en Express, guardamos datos en sesión
-                // Nota: Express nos devuelve 'perfil' dentro de la respuesta
+                // Guardamos datos para la UI
                 sessionStorage.setItem('usuario_rol', resultado.perfil.rol);
                 sessionStorage.setItem('usuario_nombre', resultado.perfil.nombres);
 
-                // Redirección manual (ya que el servicio no redirecciona, solo da datos)
+                // REDIRECCIÓN PROFESIONAL
+                // Si el backend dijo que es exitoso, el dashboard te dejará entrar 
+                // porque ya tienes la cookie sb-access-token configurada
                 window.location.href = '/dashboard';
             } else {
-                // Si el backend (o el middleware de owner) rechazó el acceso
+                // MANEJO DE ERRORES DE ZOD O AUTH
+                let mensajeError = resultado.mensaje || 'Credenciales incorrectas';
+
+                // Si vienen errores de validación de Zod (array)
+                if (resultado.errores) {
+                    mensajeError = resultado.errores.map(e => e.mensaje).join('<br>');
+                }
+
                 Swal.fire({
                     icon: 'error',
                     title: 'Acceso Denegado',
-                    text: resultado.mensaje || 'Credenciales incorrectas',
+                    html: mensajeError, // Usamos html para mostrar los <br> de Zod
                     confirmButtonColor: '#162925'
                 });
 
