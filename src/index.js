@@ -31,7 +31,7 @@ app.use('/api/usuarios', usuarioRoutes);
 
 // 5. ARCHIVOS ESTÁTICOS
 // Se colocan al final para que no interfieran con las rutas limpias
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Ruta de prueba
 app.get('/api/status', (req, res) => {
