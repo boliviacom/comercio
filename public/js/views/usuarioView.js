@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionStorage.setItem('usuario_nombre', resultado.perfil.nombres);
 
                 // Redirección manual (ya que el servicio no redirecciona, solo da datos)
-                window.location.href = '/administracion.html';
+                window.location.href = '/dashboard';
             } else {
                 // Si el backend (o el middleware de owner) rechazó el acceso
                 Swal.fire({

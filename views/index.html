@@ -83,7 +83,7 @@
                 </div>
 
                 <div class="mt-10">
-                    <form action="#" class="space-y-6" method="POST">
+                    <form class="space-y-6" onsubmit="return false;">
                         <div class="group relative">
                             <label class="block text-sm font-semibold leading-6 text-geek-black mb-1" for="email">
                                 Email
@@ -121,7 +121,7 @@
                         </div>
 
                         <div>
-                            <button
+                            <button id="btn-ingresar"
                                 class="group relative flex w-full justify-center rounded-lg bg-brand-primary px-3 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-primary transition-all duration-300 uppercase tracking-widest"
                                 type="button">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -136,8 +136,8 @@
             </div>
         </div>
     </div>
-    <script type="module" src="js/views/usuarioView.js"></script>
-    <script type="module" src="js/controllers/loginDOMController.js"></script>
+    <script type="module" src="/js/views/usuarioView.js"></script>
+    <script type="module" src="/js/controllers/loginDOMController.js"></script>
 </body>
 
 </html>

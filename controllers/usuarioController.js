@@ -11,17 +11,32 @@ const usuarioController = {
 
             const respuesta = await usuarioModel.login(email, password);
 
+            // En usuarioController.js (Método login)
+            // usuarioController.js -> dentro de login()
             if (respuesta.exito) {
-                const rol = respuesta.perfil.rol.toLowerCase();
-                if (rol === 'owner') {
-                    return res.status(200).json(respuesta);
-                } else {
-                    await usuarioModel.logout();
-                    return res.status(403).json({ 
-                        exito: false, 
-                        mensaje: "Acceso denegado: Se requieren permisos de Propietario." 
-                    });
+                // Intentamos capturar el token de todas las formas posibles según la versión de Supabase
+                const token =
+                    respuesta.data?.session?.access_token ||
+                    respuesta.session?.access_token ||
+                    respuesta.data?.access_token ||
+                    respuesta.access_token;
+
+                console.log("Token capturado:", token ? "SÍ" : "NO");
+
+                if (!token) {
+                    // Si sigue saliendo NO, vamos a ver qué tiene el objeto respuesta para entenderlo
+                    console.error("Estructura de respuesta inesperada:", JSON.stringify(respuesta));
+                    return res.status(500).json({ exito: false, mensaje: "Error al recuperar sesión" });
                 }
+
+                res.cookie('sb-access-token', token, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'lax',
+                    maxAge: 3600000
+                });
+
+                return res.status(200).json(respuesta);
             }
             res.status(401).json(respuesta);
         } catch (error) {
@@ -29,9 +44,18 @@ const usuarioController = {
         }
     },
 
+    // En usuarioController.js
     async logout(req, res) {
-        const resultado = await usuarioModel.logout();
-        res.status(200).json(resultado);
+        try {
+            await usuarioModel.logout();
+
+            // BORRAMOS LA COOKIE
+            res.clearCookie('sb-access-token');
+
+            res.status(200).json({ exito: true, mensaje: "Sesión cerrada" });
+        } catch (error) {
+            res.status(500).json({ exito: false, mensaje: error.message });
+        }
     },
 
     // ==========================================

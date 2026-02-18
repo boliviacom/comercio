@@ -26,7 +26,7 @@ const usuarioModel = {
 
             if (perfilError) throw perfilError;
 
-            return { exito: true, user: authData.user, perfil };
+            return { exito: true, user: authData.user, session: authData.session, perfil };
         } catch (err) {
             console.error('Error en usuarioModel.login:', err.message);
             return { exito: false, mensaje: err.message };
@@ -36,10 +36,13 @@ const usuarioModel = {
     /**
      * Obtiene los datos del usuario actual si hay una sesión activa
      */
-    async obtenerSesionActual() {
+    // En models/usuarioModel.js
+    async obtenerSesionActual(token) {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return null;
+            // Si pasas el token, Supabase valida esa sesión específica
+            const { data: { user }, error } = await supabase.auth.getUser(token);
+
+            if (error || !user) return null;
 
             const { data: perfil } = await supabase
                 .from('usuario')
